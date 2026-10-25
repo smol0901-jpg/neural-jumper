@@ -11,9 +11,10 @@ export function makePlatform(y, ref, activeFeatures) {
   let x;
   if (ref) {
     const rc = (ref.baseX !== undefined ? ref.baseX : ref.x) + ref.w / 2;
-    const maxD = chance(0.2) ? 300 : 200;
+    // Keep horizontal offset within jump reach (~150px typical)
+    const maxD = 40 + random() * 110; // 40..150
     const dir = chance(0.5) ? -1 : 1;
-    const off = 36 + random() * (maxD - 36);
+    const off = maxD;
     x = rc + dir * off - pw / 2;
     x = Math.max(4, Math.min(W - pw - 4, x));
   } else {

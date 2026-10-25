@@ -12,6 +12,7 @@ import {
 } from './debug.js';
 import { expertReset } from './expert.js';
 import { createUI } from './ui.js';
+import { initTilt, updateTilt, nudgeTilt } from './tilt.js';
 
 const canvas = document.getElementById('world');
 const ctx = canvas.getContext('2d');
@@ -43,6 +44,8 @@ function startGame(m) {
   ui.setModeBtn(mode);
   totalEps++;
   bootWorld();
+  state._peakScore = 0;
+  state._stagnantFrames = 0;
   ui.hideOverlay();
   started = true;
   ui.log('info', `Episode ${totalEps} · ${mode.toUpperCase()}`);
@@ -115,6 +118,11 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'p' || e.key === 'P') togglePause();
   if (e.key === 'r' || e.key === 'R') startGame(mode);
+  // Desktop tilt preview (not control)
+  if (e.key === 'i' || e.key === 'I') nudgeTilt(0, -4);
+  if (e.key === 'k' || e.key === 'K') nudgeTilt(0, 4);
+  if (e.key === 'j' || e.key === 'J') nudgeTilt(-4, 0);
+  if (e.key === 'l' || e.key === 'L') nudgeTilt(4, 0);
   if (e.key === 'm' || e.key === 'M') toggleMode();
   if (e.key === 'l' || e.key === 'L') toggleLearn();
 });
@@ -204,6 +212,17 @@ function toggleMode() {
 function toggleLearn() {
   learning = !learning;
   ui.setLearnBtn(learning);
+// Cosmetic 3D tilt of the stage (not player control)
+const _tiltBoot = () => {
+  initTilt().then(ok => {
+    document.getElementById('gameWrap')?.classList.add('tilt-ready');
+    if (ok) try { ui.log('info', 'Tilt view ON (style only)'); } catch(e) {}
+  });
+};
+document.getElementById('btnStart')?.addEventListener('click', _tiltBoot, { once: true });
+document.getElementById('btnWatchAI')?.addEventListener('click', _tiltBoot, { once: true });
+document.getElementById('btnDebugOverlay')?.addEventListener('click', _tiltBoot, { once: true });
+
   ui.log('info', learning ? 'Learning enabled' : 'Learning frozen');
 }
 
@@ -258,6 +277,7 @@ function loop(t) {
     if (dbg && dbg.enabled) drawDebugOverlay(ctx, state, dbg);
     ui.update(state, mode, learning, totalEps, bestScore);
   }
+  updateTilt(document.getElementById('gameWrap'));
 }
 
 // Fit canvas
@@ -284,6 +304,17 @@ if (!loadWeights()) {
 bootWorld();
 ui.setModeBtn(mode);
 ui.setLearnBtn(learning);
+// Cosmetic 3D tilt of the stage (not player control)
+const _tiltBoot = () => {
+  initTilt().then(ok => {
+    document.getElementById('gameWrap')?.classList.add('tilt-ready');
+    if (ok) try { ui.log('info', 'Tilt view ON (style only)'); } catch(e) {}
+  });
+};
+document.getElementById('btnStart')?.addEventListener('click', _tiltBoot, { once: true });
+document.getElementById('btnWatchAI')?.addEventListener('click', _tiltBoot, { once: true });
+document.getElementById('btnDebugOverlay')?.addEventListener('click', _tiltBoot, { once: true });
+
 ui.update(state, mode, learning, totalEps, bestScore);
 fitCanvas();
 requestAnimationFrame(loop);

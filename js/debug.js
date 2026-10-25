@@ -288,9 +288,12 @@ export function drawDebugOverlay(ctx, state, dbg) {
   ctx.restore();
 
   // debug HUD panel
+  const ld = state._lastDecision;
+  const actName = dbg.lastAction || (ld ? ['LEFT','STAY','RIGHT','DOUBLE','FIRE'][ld.action] : '-');
+  const why = dbg.lastReason || (ld && ld.reason) || '';
   const lines = [
     `DEBUG AI  run ${dbg.batchMode ? (dbg.batchIndex + 1) + '/' + dbg.batchTarget : 'live'}`,
-    `action: ${dbg.lastAction || '-'}  ${dbg.lastReason || ''}`,
+    `action: ${actName}  ${why}`.slice(0, 48),
     `score ${state.score}  landings ${dbg.current ? dbg.current.platformsLanded : 0}`,
     `target: ${state.currentTarget ? platformId(state.currentTarget) : 'none'}`,
     `urgency ${(state.urgency || 0).toFixed(2)}  above ${countAbove(state.platforms, p.y)}`

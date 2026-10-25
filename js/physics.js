@@ -1,13 +1,14 @@
 import {
   W, H, GRAV, JUMP, SPRING_JUMP, DOUBLE_JUMP, BOOST_IMPULSE,
-  ACC, MAXVX, FRICTION, CAM_LINE, DANGER_START, DANGER_END,
+  ACC, MAXVX, FRICTION, AIR_FRICTION_X, AIR_DRAG_Y,
+  CAM_LINE, DANGER_START, DANGER_END,
   EPISODE_TIMEOUT, TRAIN_EVERY, BULLET_SPEED, BULLET_LIFE,
   ENEMY_SPEED, MAX_FAIL_JUMPS
 } from './config.js';
 import { random, chance } from './rng.js';
 import { diff, computeDifficulty, applyLevelFeatures, levelFromScore, milestoneMessage } from './levels.js';
 import { makePlatform, makeEnemy } from './world.js';
-import { decide, trainBatch, setBestScore } from './network.js';
+import { trainBatch, setBestScore, recordHuman, decide } from './network.js';
 import { clamp } from './utils.js';
 import { expertAction, expertNotifyLanding } from './expert.js';
 
@@ -40,6 +41,10 @@ export function physicsStep(state, opts) {
     if (keys.right) mx = 1;
     if (humanJumpQueued && player.jumpsLeft > 0) { doDouble = true; clearJumpQueue(); }
     if (fireQueued) { doFire = true; clearFire(); }
+    // Imitation learning: record player actions
+    if (learning && state.frame % 2 === 0) {
+      try { recordHuman(state, keys, doDouble, doFire); } catch (e) {}
+    }
   } else {
     // Expert pathfinder (primary) — near-automatic climbing
     const exp = expertAction(state);
@@ -48,7 +53,8 @@ export function physicsStep(state, opts) {
     else if (a === 2) mx = 1;
     if (a === 3) doDouble = true;
     if (exp.fire) doFire = true;
-    // keep a light decision object for optional learning buffer
+    state._lastDecision = exp;
+    if (onDecision) onDecision(state, a, exp);
     decision = { action: a, probs: [0,0,0,0,0], cache: { x: new Array(19).fill(0), h: new Array(16).fill(0), logits: [0,0,0,0,0] } };
     decision.probs[a] = 1;
   }
@@ -71,11 +77,19 @@ export function physicsStep(state, opts) {
     });
   }
 
+  // ── Aerodynamics / integration ──
+  // Horizontal accel from input, wind, then soft air friction (not hard stop)
   player.vx += mx * ACC;
   if (state.activeFeatures.has('wind')) player.vx += state.windAccel;
-  player.vx *= FRICTION;
+  player.vx *= AIR_FRICTION_X;
+  // Residual platform friction only right after bounce
+  if (state.frame - (player.lastBounce || 0) < 3) player.vx *= FRICTION;
   player.vx = clamp(player.vx, -MAXVX, MAXVX);
+
+  // Gravity + light vertical air drag opposing velocity (parachute-ish at high speed)
   player.vy += GRAV;
+  player.vy -= player.vy * Math.abs(player.vy) * AIR_DRAG_Y;
+
   const prevY = player.y;
   player.x += player.vx;
   player.y += player.vy;
@@ -211,6 +225,20 @@ export function physicsStep(state, opts) {
     top = p;
   }
 
+  
+  // Stagnation: bouncing without height gain → end early (anti-timeout loop)
+  if (!state._peakScore) state._peakScore = state.score;
+  if (state.score > state._peakScore) {
+    state._peakScore = state.score;
+    state._stagnantFrames = 0;
+  } else {
+    state._stagnantFrames = (state._stagnantFrames || 0) + 1;
+  }
+  if (state._stagnantFrames > 600 && state.jumps > 4) {
+    endEp(state, 'stuck', rewardHistory, learning, onLog, onEpisodeEnd);
+    return;
+  }
+
   if (player.y - player.h / 2 > H + 50) {
     endEp(state, 'fell', rewardHistory, learning, onLog, onEpisodeEnd);
   }
@@ -330,7 +358,8 @@ function think(state, learning) {
   // pad to N_IN if network still 17
   while (inputs.length < 19) inputs.push(0);
 
-  return decide(inputs, learning);
+  // Legacy path: build minimal state-like and use new decide
+  return decide(state, learning ? 1.4 : 2.2);
 }
 
 function checkLevel(state, onLog, onLevelUp) {
