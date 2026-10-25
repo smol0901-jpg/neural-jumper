@@ -11,6 +11,12 @@
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
 </head>
 <body>
 
@@ -64,6 +70,11 @@
         <kbd>←</kbd> <kbd>→</kbd> move · <kbd>SPACE</kbd> double-jump<br>
         Features unlock & intensity scales with height
       </p>
+    </div>
+    <div class="touch-pad" id="touchPad" style="display:none">
+      <button class="touch-btn" id="tLeft">◀</button>
+      <button class="touch-btn fire" id="tFire">●</button>
+      <button class="touch-btn" id="tRight">▶</button>
     </div>
   </div>
 
@@ -150,6 +161,16 @@
   <span class="hint">Neural Ascent · modular · 2.5D · pure browser</span>
 </footer>
 
+<div class="install-bar" id="installBar">
+  <span>Install Neural Ascent</span>
+  <button id="btnInstall">INSTALL</button>
+  <button class="dismiss" id="btnInstallDismiss">✕</button>
+</div>
 <script type="module" src="js/main.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
 </body>
 </html>

@@ -19,6 +19,7 @@ let paused = false;
 let started = false;
 let keys = { left: false, right: false };
 let humanJumpQueued = false;
+let fireQueued = false;
 let totalEps = 0;
 let rewardHistory = [];
 let bestScore = 0;
@@ -67,6 +68,9 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Space' || e.key === 'w' || e.key === 'W') {
     e.preventDefault();
     if (mode === 'human') humanJumpQueued = true;
+  }
+  if (e.key === 'f' || e.key === 'F' || e.code === 'KeyF') {
+    if (mode === 'human') fireQueued = true;
   }
   if (e.key === 'p' || e.key === 'P') togglePause();
   if (e.key === 'r' || e.key === 'R') startGame(mode);
@@ -157,11 +161,13 @@ function loop(t) {
         learning,
         keys,
         humanJumpQueued,
+        fireQueued,
         rewardHistory,
         onLog: ui.log,
         onLevelUp,
         onEpisodeEnd,
-        clearJumpQueue: () => { humanJumpQueued = false; }
+        clearJumpQueue: () => { humanJumpQueued = false; },
+        clearFire: () => { fireQueued = false; }
       });
       acc -= TICK;
       steps++;
@@ -204,3 +210,38 @@ ui.setLearnBtn(learning);
 ui.update(state, mode, learning, totalEps, bestScore);
 fitCanvas();
 requestAnimationFrame(loop);
+
+// Touch controls
+const tLeft = document.getElementById('tLeft');
+const tRight = document.getElementById('tRight');
+const tFire = document.getElementById('tFire');
+if (tLeft) {
+  const bind = (el, down, up) => {
+    el.addEventListener('touchstart', e => { e.preventDefault(); down(); }, {passive:false});
+    el.addEventListener('touchend', e => { e.preventDefault(); up(); });
+    el.addEventListener('mousedown', e => { e.preventDefault(); down(); });
+    el.addEventListener('mouseup', up);
+  };
+  bind(tLeft, () => { keys.left = true; }, () => { keys.left = false; });
+  bind(tRight, () => { keys.right = true; }, () => { keys.right = false; });
+  bind(tFire, () => { fireQueued = true; humanJumpQueued = true; }, () => {});
+}
+
+// PWA install
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const bar = document.getElementById('installBar');
+  if (bar) bar.classList.add('show');
+});
+document.getElementById('btnInstall')?.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('installBar')?.classList.remove('show');
+});
+document.getElementById('btnInstallDismiss')?.addEventListener('click', () => {
+  document.getElementById('installBar')?.classList.remove('show');
+});

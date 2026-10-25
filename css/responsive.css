@@ -1,0 +1,182 @@
+/* Device-specific designs */
+
+/* ===== PHONE (default-first, < 640px) ===== */
+@media (max-width: 639px) {
+  :root {
+    --phone-accent: #22d3ee;
+  }
+  body {
+    background: #05070c;
+  }
+  .top {
+    height: 44px;
+    padding: 0 10px;
+    background: linear-gradient(180deg, #0e1624, #0a0e16);
+  }
+  .brand .name { display: none; }
+  .brand-ver { display: none; }
+  .score-box { font-size: 12px; min-width: 80px; }
+  .btn { height: 28px; padding: 0 10px; font-size: 10px; }
+  .main { grid-template-columns: 1fr; }
+  .side { display: none !important; }
+  .bottom {
+    height: auto;
+    min-height: 52px;
+    padding: 8px 10px 12px;
+    flex-wrap: wrap;
+    gap: 6px;
+    background: linear-gradient(0deg, #0a101c, #0e141f);
+  }
+  .bottom .hint { display: none; }
+  canvas#world {
+    border-radius: 0;
+    box-shadow: none;
+    max-height: calc(100dvh - 100px);
+  }
+  .hud-block {
+    padding: 6px 8px;
+    background: rgba(5, 8, 14, 0.75);
+  }
+  .overlay h1 { font-size: 24px; }
+  .overlay .big-score { font-size: 40px; }
+
+  /* on-screen touch controls */
+  .touch-pad {
+    display: flex !important;
+    position: absolute;
+    bottom: 58px;
+    left: 0;
+    right: 0;
+    height: 72px;
+    justify-content: space-between;
+    padding: 0 12px;
+    pointer-events: none;
+    z-index: 7;
+  }
+  .touch-btn {
+    pointer-events: auto;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid rgba(34, 211, 238, 0.45);
+    background: rgba(8, 14, 24, 0.65);
+    color: var(--cyan);
+    font-family: var(--mono);
+    font-size: 18px;
+    display: grid;
+    place-items: center;
+    backdrop-filter: blur(6px);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .touch-btn:active, .touch-btn.active {
+    background: rgba(34, 211, 238, 0.25);
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.35);
+  }
+  .touch-btn.fire {
+    border-color: rgba(251, 113, 133, 0.5);
+    color: var(--rose);
+  }
+}
+
+/* ===== TABLET (640–1023px) ===== */
+@media (min-width: 640px) and (max-width: 1023px) {
+  :root {
+    --tablet-accent: #a78bfa;
+  }
+  .top {
+    background: linear-gradient(90deg, #0e1420, #12101c 50%, #0e1420);
+    border-bottom-color: rgba(167, 139, 250, 0.25);
+  }
+  .brand-mark {
+    box-shadow: 0 0 18px rgba(167, 139, 250, 0.35);
+  }
+  .brand-mark svg { stroke: var(--violet); }
+  .main {
+    grid-template-columns: 1fr 280px;
+  }
+  .side {
+    border-left-color: rgba(167, 139, 250, 0.2);
+    background: linear-gradient(180deg, #0f1420, #121018);
+  }
+  .tab.active {
+    background: var(--violet-dim);
+    color: var(--violet);
+  }
+  canvas#world {
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2), 0 16px 40px rgba(0,0,0,0.4);
+  }
+  .touch-pad { display: none !important; }
+}
+
+/* ===== DESKTOP (≥1024px) ===== */
+@media (min-width: 1024px) {
+  :root {
+    --desk-accent: #22d3ee;
+  }
+  body {
+    background-image:
+      radial-gradient(ellipse 70% 45% at 30% -5%, rgba(34, 211, 238, 0.08), transparent 50%),
+      radial-gradient(ellipse 50% 40% at 95% 70%, rgba(167, 139, 250, 0.06), transparent 45%),
+      linear-gradient(180deg, #05070c, #080c14);
+  }
+  .main {
+    grid-template-columns: 1fr 360px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .game-wrap {
+    padding: 12px;
+  }
+  canvas#world {
+    border-radius: 14px;
+    box-shadow:
+      0 0 0 1px var(--line),
+      0 24px 60px rgba(0, 0, 0, 0.5),
+      0 0 40px rgba(34, 211, 238, 0.12);
+  }
+  .side {
+    border-radius: 0 0 0 12px;
+  }
+  .touch-pad { display: none !important; }
+  .bottom .hint { display: inline; }
+}
+
+/* Install banner */
+.install-bar {
+  display: none;
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  background: var(--panel);
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  border-radius: 12px;
+  padding: 10px 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  font-family: var(--mono);
+  font-size: 12px;
+  align-items: center;
+  gap: 12px;
+  color: var(--txt);
+}
+.install-bar.show { display: flex; }
+.install-bar button {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(34,211,238,0.5);
+  background: rgba(34,211,238,0.15);
+  color: var(--cyan);
+  font-family: var(--mono);
+  cursor: pointer;
+}
+.install-bar .dismiss {
+  border: none;
+  background: transparent;
+  color: var(--txt-mute);
+  cursor: pointer;
+}

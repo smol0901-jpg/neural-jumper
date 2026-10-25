@@ -32,9 +32,10 @@ function handCraftedInit() {
     [0, 5, 0, 0, 0.5, 0, 0, 0, 0, 4, 0, 4, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.5],
     [5, 0, 0, 0, 0, 0.5, 0, 0, 4, 0, 4, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 2, 0]
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 2, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 2]
   ];
-  B2 = [0.2, -1.0, 0.2, -1.2];
+  B2 = [0.2, -1.0, 0.2, -1.2, -0.5];
 }
 
 export function buildWeights(jit = 0.25) {
@@ -214,10 +215,9 @@ export function decide(inputs, learning) {
   } else {
     const y = cache.logits;
     action = 0;
-    if (y[1] > y[0] && y[1] > y[2]) action = 1;
-    else if (y[2] > y[0]) action = 2;
-    if (y[3] > Math.max(y[0], y[1], y[2])) action = 3;
-    probs = [0, 0, 0, 0];
+    let best = y[0];
+    for (let i = 1; i < y.length; i++) if (y[i] > best) { best = y[i]; action = i; }
+    probs = new Array(y.length).fill(0);
     probs[action] = 1;
   }
   return { action, probs, cache };
