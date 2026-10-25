@@ -1,0 +1,52 @@
+/* Neural Ascent — theme tokens */
+:root {
+  --bg-deep: #05070c;
+  --bg: #0a0e16;
+  --panel: #0e141f;
+  --panel-2: #121a28;
+  --panel-3: #0b1019;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.14);
+
+  --txt: #e8eef8;
+  --txt-dim: #9aabbc;
+  --txt-mute: #5f6f82;
+  --txt-faint: #3d4a5c;
+
+  --cyan: #22d3ee;
+  --cyan-dim: rgba(34, 211, 238, 0.15);
+  --lime: #a3e635;
+  --lime-dim: rgba(163, 230, 53, 0.12);
+  --rose: #fb7185;
+  --amber: #f59e0b;
+  --violet: #a78bfa;
+  --violet-dim: rgba(167, 139, 250, 0.14);
+
+  --glow-cyan: 0 0 24px rgba(34, 211, 238, 0.35);
+  --glow-lime: 0 0 18px rgba(163, 230, 53, 0.3);
+
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+  --sans: "Inter", system-ui, -apple-system, sans-serif;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+html[data-theme="light"] {
+  --bg-deep: #e8eef5;
+  --bg: #f4f7fb;
+  --panel: #ffffff;
+  --panel-2: #f0f4f9;
+  --panel-3: #fafbfd;
+  --line: rgba(15, 23, 42, 0.08);
+  --line-strong: rgba(15, 23, 42, 0.15);
+  --txt: #0f172a;
+  --txt-dim: #334155;
+  --txt-mute: #64748b;
+  --txt-faint: #94a3b8;
+  --cyan: #0891b2;
+  --lime: #65a30d;
+  --rose: #e11d48;
+  --amber: #d97706;
+  --violet: #7c3aed;
+}

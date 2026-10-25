@@ -1,11 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Neural Jumper</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0a0e16">
+  <title>Neural Ascent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
-<p>Loading full game... Please wait for update.</p>
-<script>location.reload()</script>
+
+<header class="top">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 3 L4 19 H20 Z M9 14 H15"/></svg>
+    </div>
+    <span class="name">Neural Ascent</span>
+    <span class="brand-ver">v2.0</span>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn lime" id="btnMode">HUMAN</button>
+  <button class="btn lime" id="btnLearn">LEARN ON</button>
+  <button class="btn" id="btnPause">PAUSE</button>
+  <div class="score-box">
+    <span class="lvl">LVL <span id="topLevel">1</span></span>
+    <span id="topScore">0</span>
+  </div>
+</header>
+
+<main class="main">
+  <div class="game-wrap" id="gameWrap">
+    <canvas id="world" width="420" height="620"></canvas>
+    <div class="level-banner" id="levelBanner">LEVEL 1</div>
+
+    <div class="hud">
+      <div class="hud-block">
+        <div><span class="label">Height</span></div>
+        <div class="val" id="hudHeight">0</div>
+        <div><span class="label">Level</span></div>
+        <div class="val violet" id="hudLevel">1</div>
+      </div>
+      <div class="hud-block" style="text-align:right">
+        <div><span class="label">Best</span></div>
+        <div class="val" id="hudBest">0</div>
+        <div><span class="label">Jumps</span></div>
+        <div class="val" id="hudJumps">0</div>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <h1>Neural Ascent</h1>
+      <p class="sub">
+        Climb the endless tower.<br>
+        40+ self-generating levels · optional neural agent · pure browser.
+      </p>
+      <button class="btn active" id="btnStart">START GAME</button>
+      <button class="btn" id="btnWatchAI">WATCH AI</button>
+      <p class="sub" style="margin-top:20px;font-size:11px">
+        <kbd>←</kbd> <kbd>→</kbd> move · <kbd>SPACE</kbd> double-jump<br>
+        Features unlock & intensity scales with height
+      </p>
+    </div>
+  </div>
+
+  <aside class="side" id="side">
+    <div class="side-head">
+      <span>INFO</span>
+      <div class="tabs">
+        <span class="tab active" data-tab="stats">STATS</span>
+        <span class="tab" data-tab="help">HELP</span>
+        <span class="tab" data-tab="log">LOG</span>
+      </div>
+    </div>
+    <div class="side-body">
+      <div id="panelStats">
+        <div class="card">
+          <div class="card-title">Session</div>
+          <div class="stat-row"><span class="k">Score</span><span class="v cyan" id="sScore">0</span></div>
+          <div class="stat-row"><span class="k">Best</span><span class="v lime" id="sBest">0</span></div>
+          <div class="stat-row"><span class="k">Level</span><span class="v violet" id="sLevel">1</span></div>
+          <div class="stat-row"><span class="k">Episodes</span><span class="v" id="sEps">0</span></div>
+          <div class="stat-row"><span class="k">Features</span><span class="v" id="sFeats">none</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Difficulty (auto)</div>
+          <div class="stat-row"><span class="k">Plat size</span><span class="v" id="sSize">100%</span></div>
+          <div class="stat-row"><span class="k">Gap / Speed</span><span class="v" id="sGap">—</span></div>
+          <div class="stat-row"><span class="k">Wind / Vanish</span><span class="v" id="sWind">—</span></div>
+          <div class="stat-row"><span class="k">Intensity</span><span class="v amber" id="sInt">1.0×</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">AI / Learning</div>
+          <div class="stat-row"><span class="k">Mode</span><span class="v" id="sMode">Human</span></div>
+          <div class="stat-row"><span class="k">Learning</span><span class="v" id="sLearn">ON</span></div>
+          <div class="stat-row"><span class="k">Updates</span><span class="v" id="sUpdates">0</span></div>
+          <div class="stat-row"><span class="k">Smartness</span><span class="v lime" id="sSmart">0</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Controls</div>
+          <div class="controls-help">
+            <div><kbd>←</kbd> <kbd>A</kbd> / <kbd>→</kbd> <kbd>D</kbd> — move</div>
+            <div><kbd>SPACE</kbd> / <kbd>W</kbd> — double jump</div>
+            <div><kbd>P</kbd> pause · <kbd>R</kbd> restart</div>
+            <div><kbd>M</kbd> AI/Human · <kbd>L</kbd> learning</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="panelHelp" style="display:none">
+        <div class="card">
+          <div class="card-title">Levels 1–40+</div>
+          <div class="controls-help">
+            Levels are self-generating. Every ~450 height the level rises.<br><br>
+            <b>1–7</b> — unlock core features<br>
+            <b>8–15</b> — all features, intensity rises<br>
+            <b>16–25</b> — tighter gaps, faster movers<br>
+            <b>26–35</b> — extreme tiny platforms<br>
+            <b>36+</b> — nightmare scaling<br><br>
+            No hard cap — difficulty keeps growing.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">2.5D Renderer</div>
+          <div class="controls-help">
+            Perspective projection, parallax star layers,
+            volumetric platform gradients, drop shadows and glow.
+          </div>
+        </div>
+      </div>
+
+      <div id="panelLog" style="display:none">
+        <div class="card">
+          <div class="card-title">Event log</div>
+          <div class="log" id="log"></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer class="bottom">
+  <button class="btn" id="btnReset">RESTART</button>
+  <button class="btn" id="btnWipe">WIPE AI</button>
+  <button class="btn" id="btnSide">INFO</button>
+  <span class="hint">Neural Ascent · modular · 2.5D · pure browser</span>
+</footer>
+
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
