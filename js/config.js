@@ -1,4 +1,4 @@
-export const VERSION = '7.1.1';
+export const VERSION = '7.1.3';
 /* Neural Ascent — physics & game config
  *
  * Discrete integration @ 60 FPS (dt ≈ 1 frame):

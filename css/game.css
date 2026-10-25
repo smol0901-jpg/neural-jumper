@@ -88,6 +88,8 @@ canvas#world {
 
 /* Overlay */
 .overlay {
+  z-index: 50 !important;
+  pointer-events: auto;
   position: absolute;
   inset: 0;
   display: flex;

@@ -1,5 +1,5 @@
 /* Neural Ascent service worker v7 — network-first for JS so updates apply */
-const CACHE = 'neural-ascent-v7';
+const CACHE = 'neural-ascent-v7.1.3';
 const ASSETS = [
   './',
   './index.html',

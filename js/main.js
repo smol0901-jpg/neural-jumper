@@ -39,6 +39,36 @@ function bootWorld() {
   humanJumpQueued = false;
 }
 
+/** Force-recover from empty / broken screen */
+function showMenu() {
+  try { setSideOpen(false); } catch (e) {}
+  paused = false;
+  started = false;
+  dbg.batchMode = false;
+  dbg.enabled = false;
+  bootWorld();
+  const html = `
+    <h1>NEURAL ASCENT</h1>
+    <p class="sub">v7.1.2 · self-generating levels · AI pilot</p>
+    <button class="btn active" id="btnStart">START GAME</button>
+    <button class="btn" id="btnWatchAI">WATCH AI</button>
+    <button class="btn" id="btnDebugOverlay" style="margin-top:8px;border-color:rgba(251,191,36,0.55);color:#fbbf24">DEBUG AI ×10</button>
+    <p class="sub" style="margin-top:16px;font-size:11px">If screen was empty — you're back. Turn OFF page translate for best results.</p>
+  `;
+  ui.showOverlay(html);
+  document.getElementById('btnStart').onclick = () => startGame('human');
+  document.getElementById('btnWatchAI').onclick = () => startGame('ai');
+  document.getElementById('btnDebugOverlay').onclick = () => startDebugBatch();
+  // re-show overlay element hard
+  const ov = document.getElementById('overlay');
+  if (ov) {
+    ov.style.display = 'flex';
+    ov.style.opacity = '1';
+    ov.style.pointerEvents = 'auto';
+    ov.style.zIndex = '50';
+  }
+}
+
 function startGame(m) {
   try { setSideOpen(false); } catch(e) {}
   mode = m;
@@ -157,7 +187,8 @@ document.getElementById('btnLearn').onclick = toggleLearn;
 document.getElementById('btnPause').onclick = togglePause;
 document.getElementById('btnReset').onclick = () => {
   try { setSideOpen(false); } catch(e) {}
-  startGame(mode);
+  // Always full recovery — never leave black void
+  showMenu();
 };
 document.getElementById('btnWipe').onclick = () => {
   wipeWeights();
@@ -306,11 +337,21 @@ function loop(t) {
   }
 
   if (state) {
-    drawFrame(ctx, state, mode);
-    if (dbg && dbg.enabled) drawDebugOverlay(ctx, state, dbg);
-    ui.update(state, mode, learning, totalEps, bestScore);
+    try {
+      drawFrame(ctx, state, mode);
+      if (dbg && dbg.enabled) drawDebugOverlay(ctx, state, dbg);
+    } catch (err) {
+      console.error('draw error', err);
+    }
+    try { ui.update(state, mode, learning, totalEps, bestScore); } catch (e) {}
   }
-  updateTilt(document.getElementById('gameWrap'));
+  try { updateTilt(document.getElementById('gameWrap')); } catch (e) {}
+
+  // Auto-recover: started but no platforms → broken world
+  if (started && state && (!state.platforms || state.platforms.length === 0) && !state.gameOver) {
+    console.warn('empty world — recovering');
+    showMenu();
+  }
 }
 
 // Fit canvas
@@ -348,9 +389,19 @@ document.getElementById('btnStart')?.addEventListener('click', _tiltBoot, { once
 document.getElementById('btnWatchAI')?.addEventListener('click', _tiltBoot, { once: true });
 document.getElementById('btnDebugOverlay')?.addEventListener('click', _tiltBoot, { once: true });
 
-ui.update(state, mode, learning, totalEps, bestScore);
+try { ui.update(state, mode, learning, totalEps, bestScore); } catch (e) { console.warn('boot ui', e); }
 fitCanvas();
+// Always start the game loop — never leave a dead canvas
 requestAnimationFrame(loop);
+setTimeout(() => {
+  const ov = document.getElementById('overlay');
+  if (ov && !started) {
+    ov.style.display = 'flex';
+    ov.style.zIndex = '50';
+  }
+  fitCanvas();
+}, 100);
+
 
 // Touch controls
 const tLeft = document.getElementById('tLeft');

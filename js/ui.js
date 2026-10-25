@@ -33,35 +33,36 @@ export function createUI() {
   };
 
   function update(state, mode, learning, totalEps, bestScore) {
-    const net = getNetStats();
-    els.topScore.textContent = state.score;
-    els.topLevel.textContent = state.level;
-    els.hudHeight.textContent = state.score;
-    els.hudLevel.textContent = state.level;
-    els.hudBest.textContent = Math.max(bestScore, net.bestScore);
-    els.hudJumps.textContent = state.jumps;
-
-    els.sScore.textContent = state.score;
-    els.sBest.textContent = Math.max(bestScore, net.bestScore);
-    els.sLevel.textContent = state.level;
-    els.sEps.textContent = totalEps;
-    els.sFeats.textContent = state.activeFeatures.size
-      ? [...state.activeFeatures].join(', ') : 'none';
-
-    els.sSize.textContent = Math.round(diff.sizeMul * 100) + '%';
-    els.sGap.textContent = Math.round(diff.gapBase) + ' / ' + diff.moveSpeed.toFixed(3);
-    els.sWind.textContent =
-      (state.activeFeatures.has('wind')
-        ? (state.windAccel > 0 ? '→' : '←') + diff.windStr.toFixed(3)
-        : '—') +
-      ' / ' + Math.round(diff.vanishChance * 100) + '%';
-    els.sInt.textContent = diff.intensity.toFixed(1) + '×';
-
-    els.sMode.textContent = mode === 'ai' ? 'AI' : 'Human';
-    els.sLearn.textContent = learning ? 'ON' : 'OFF';
-    els.sUpdates.textContent = net.totalUpdates;
-    const smart = net.smartHistory.length ? net.smartHistory[net.smartHistory.length - 1] : 0;
-    els.sSmart.textContent = Math.round(smart);
+    try {
+      if (!state) return;
+      const net = getNetStats() || {};
+      const set = (el, v) => { if (el) el.textContent = v; };
+      set(els.topScore, state.score);
+      set(els.topLevel, state.level);
+      set(els.hudHeight, state.score);
+      set(els.hudLevel, state.level);
+      set(els.hudBest, Math.max(bestScore || 0, net.bestScore || 0));
+      set(els.hudJumps, state.jumps);
+      set(els.sScore, state.score);
+      set(els.sBest, Math.max(bestScore || 0, net.bestScore || 0));
+      set(els.sLevel, state.level);
+      set(els.sEps, totalEps);
+      const feats = state.activeFeatures;
+      set(els.sFeats, feats && feats.size ? [...feats].join(', ') : 'none');
+      set(els.sSize, Math.round((diff.sizeMul || 1) * 100) + '%');
+      set(els.sGap, Math.round(diff.gapBase || 0) + ' / ' + (diff.moveSpeed || 0).toFixed(3));
+      const windStr = (feats && feats.has('wind'))
+        ? ((state.windAccel > 0 ? '→' : '←') + (diff.windStr || 0).toFixed(3))
+        : '—';
+      set(els.sWind, windStr + ' / ' + Math.round((diff.vanishChance || 0) * 100) + '%');
+      set(els.sInt, (diff.intensity || 1).toFixed(1) + '×');
+      set(els.sMode, mode === 'ai' ? 'AI' : 'Human');
+      set(els.sLearn, learning ? 'ON' : 'OFF');
+      set(els.sUpdates, net.totalUpdates ?? 0);
+      set(els.sSmart, Math.round(net.smart ?? 0));
+    } catch (err) {
+      console.warn('ui.update', err);
+    }
   }
 
   function log(type, msg) {
