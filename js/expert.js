@@ -102,8 +102,8 @@ function rankPlatforms(player, platforms, enemies, progressStuck) {
   for (const p of platforms) {
     if (p.dead) continue;
     const dy = player.y - p.y; // positive = above
-    if (dy < 16) continue;     // must be above
-    if (dy > 320) continue;
+    if (dy < 18) continue;     // must be strictly above
+    if (dy > 280) continue;
 
     const id = pid(p);
     if (hardBan.has(id)) continue;
@@ -170,7 +170,8 @@ function pickTarget(player, platforms, enemies, progressStuck, urgency) {
         best = cost; safe = p;
       }
     }
-    if (safe) return { p: safe, reason: 'emergency' };
+    // emergency only if still somewhat above player feet
+    if (safe && safe.y < player.y + 30) return { p: safe, reason: 'emergency' };
   }
 
   const ranked = rankPlatforms(player, platforms, enemies, progressStuck);

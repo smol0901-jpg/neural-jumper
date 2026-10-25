@@ -234,12 +234,16 @@ export function physicsStep(state, opts) {
   } else {
     state._stagnantFrames = (state._stagnantFrames || 0) + 1;
   }
-  if ((state._stagnantFrames > 480 && state.jumps > 3) || (typeof isAiLooping === 'function' && isAiLooping() && state.jumps > 3)) {
+  // High urgency = die faster (was 480 ≈ 8s freeze on video)
+  const stagnLimit = (state.urgency > 0.7) ? 90 : (state.urgency > 0.35 ? 150 : 240);
+  if ((state._stagnantFrames > stagnLimit && state.jumps > 2) ||
+      (typeof isAiLooping === 'function' && isAiLooping() && state.jumps > 2)) {
     endEp(state, 'stuck', rewardHistory, learning, onLog, onEpisodeEnd);
     return;
   }
 
-  if (player.y - player.h / 2 > H + 50) {
+  // Fall death — tighter threshold so off-screen ends quickly
+  if (player.y - player.h / 2 > H + 20) {
     endEp(state, 'fell', rewardHistory, learning, onLog, onEpisodeEnd);
   }
 }

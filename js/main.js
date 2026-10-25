@@ -333,7 +333,12 @@ function loop(t) {
       steps++;
     }
   } else if (started && state && state.gameOver && mode === 'ai' && !(dbg.batchMode)) {
-    if (state.deadTimer > 100) startGame('ai');
+    // deadTimer used to only increment inside physics which does NOT run when gameOver
+    state.deadTimer = (state.deadTimer || 0) + 1;
+    if (state.deadTimer > 45) startGame('ai'); // ~0.75s then auto-retry
+  } else if (started && state && state.gameOver && dbg.batchMode) {
+    // batch restart is handled in onEpisodeEnd; keep timer for safety
+    state.deadTimer = (state.deadTimer || 0) + 1;
   }
 
   if (state) {
