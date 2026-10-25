@@ -18,7 +18,8 @@
   .score-box { font-size: 12px; min-width: 80px; }
   .btn { height: 28px; padding: 0 10px; font-size: 10px; }
   .main { grid-template-columns: 1fr; }
-  .side { display: none !important; }
+  .side { display: none; }
+  .side.open { display: flex !important; position: absolute; inset: 44px 0 52px 0; z-index: 40; background: var(--bg); }
   .bottom {
     height: auto;
     min-height: 52px;

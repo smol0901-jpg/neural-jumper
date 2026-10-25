@@ -9,6 +9,7 @@ import { diff, computeDifficulty, applyLevelFeatures, levelFromScore, milestoneM
 import { makePlatform, makeEnemy } from './world.js';
 import { decide, trainBatch, setBestScore } from './network.js';
 import { clamp } from './utils.js';
+import { expertAction } from './expert.js';
 
 function reachable(player, p) {
   const dx = Math.abs((p.x + p.w / 2) - player.x);
@@ -40,17 +41,16 @@ export function physicsStep(state, opts) {
     if (humanJumpQueued && player.jumpsLeft > 0) { doDouble = true; clearJumpQueue(); }
     if (fireQueued) { doFire = true; clearFire(); }
   } else {
-    decision = think(state, learning);
-    const a = decision.action;
+    // Expert pathfinder (primary) — near-automatic climbing
+    const exp = expertAction(state);
+    const a = exp.action;
     if (a === 0) mx = -1;
     else if (a === 2) mx = 1;
     if (a === 3) doDouble = true;
-    if (a === 4) doFire = true;
-    // emergency
-    if (state.urgency > 0.85 && state.currentSafe) {
-      const ex = (state.currentSafe.x + state.currentSafe.w / 2) - player.x;
-      mx = ex > 8 ? 1 : (ex < -8 ? -1 : 0);
-    }
+    if (exp.fire) doFire = true;
+    // keep a light decision object for optional learning buffer
+    decision = { action: a, probs: [0,0,0,0,0], cache: { x: new Array(19).fill(0), h: new Array(16).fill(0), logits: [0,0,0,0,0] } };
+    decision.probs[a] = 1;
   }
   if (mx) player.facing = mx;
 

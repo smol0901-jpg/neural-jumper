@@ -111,8 +111,17 @@ document.getElementById('btnWipe').onclick = () => {
   ui.log('warn', 'AI weights wiped');
   if (started) startGame(mode);
 };
-document.getElementById('btnSide').onclick = () => {
-  document.getElementById('side').classList.toggle('open');
+document.getElementById('btnSide').onclick = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  const side = document.getElementById('side');
+  side.classList.toggle('open');
+  // force visible on small screens
+  if (side.classList.contains('open')) {
+    side.style.display = 'flex';
+  } else if (window.innerWidth <= 960) {
+    side.style.display = 'none';
+  }
 };
 
 document.querySelectorAll('.tab').forEach(t => {
