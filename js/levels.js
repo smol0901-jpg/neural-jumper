@@ -14,8 +14,8 @@ export function computeDifficulty(lvl) {
   const t = Math.max(0, lvl - 1);
   diff.sizeMul = Math.max(0.42, 1.0 - t * 0.015);
   // gaps must stay within single/double jump range early
-  diff.gapBase = 58 + t * 2.2;
-  diff.gapVar = 28 + t * 1.3;
+  diff.gapBase = Math.min(95, 52 + t * 1.8);
+  diff.gapVar = Math.min(50, 22 + t * 1.1);
   diff.moveAmp = 22 + t * 1.4;
   diff.moveSpeed = 0.018 + t * 0.0018;
   diff.vanishChance = Math.min(0.85, 0.25 + t * 0.018);

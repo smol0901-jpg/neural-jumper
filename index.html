@@ -32,6 +32,7 @@
   <button class="btn lime" id="btnMode">HUMAN</button>
   <button class="btn lime" id="btnLearn">LEARN ON</button>
   <button class="btn" id="btnPause">PAUSE</button>
+  <button class="btn" id="btnDebugTop" style="border-color:rgba(251,191,36,0.5);color:#fbbf24">DEBUG×10</button>
   <div class="score-box">
     <span class="lvl">LVL <span id="topLevel">1</span></span>
     <span id="topScore">0</span>
@@ -66,6 +67,7 @@
       </p>
       <button class="btn active" id="btnStart">START GAME</button>
       <button class="btn" id="btnWatchAI">WATCH AI</button>
+      <button class="btn" id="btnDebugOverlay" style="margin-top:8px;border-color:rgba(251,191,36,0.55);color:#fbbf24">DEBUG AI ×10 RUNS</button>
       <p class="sub" style="margin-top:20px;font-size:11px">
         <kbd>←</kbd> <kbd>→</kbd> move · <kbd>SPACE</kbd> double-jump<br>
         Features unlock & intensity scales with height
@@ -131,16 +133,28 @@
             <b>8–15</b> — all features, intensity rises<br>
             <b>16–25</b> — tighter gaps, faster movers<br>
             <b>26–35</b> — extreme tiny platforms<br>
-            <b>36+</b> — nightmare scaling<br><br>
-            No hard cap — difficulty keeps growing.
+            <b>36+</b> — nightmare scaling
           </div>
         </div>
         <div class="card">
-          <div class="card-title">2.5D Renderer</div>
+          <div class="card-title">Controls</div>
           <div class="controls-help">
-            Perspective projection, parallax star layers,
-            volumetric platform gradients, drop shadows and glow.
+            <div><kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd> — move</div>
+            <div><kbd>SPACE</kbd> / <kbd>W</kbd> — double jump</div>
+            <div><kbd>F</kbd> — fire · <kbd>P</kbd> pause · <kbd>R</kbd> restart</div>
+            <div><kbd>M</kbd> AI/Human · <kbd>L</kbd> learning</div>
           </div>
+        </div>
+        <div class="card">
+          <div class="card-title">AI Debug</div>
+          <div class="controls-help">
+            Runs <b>10</b> AI episodes with pixel grid, platform IDs,
+            decision reasons (why left/right/double), landing coordinates.
+            Downloads <b>ai-debug-report.txt</b> and <b>ai-debug-report.json</b>.
+          </div>
+          <button class="btn active" id="btnDebugHelp" style="width:100%;margin-top:12px;justify-content:center;border-color:rgba(251,191,36,0.65);color:#fbbf24">
+            START DEBUG ×10
+          </button>
         </div>
       </div>
 

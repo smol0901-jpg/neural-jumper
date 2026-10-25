@@ -10,6 +10,7 @@ import {
   createDebugState, startRun, logDecision, logLanding, logSample,
   endRun, buildReport, reportToText, drawDebugOverlay
 } from './debug.js';
+import { expertReset } from './expert.js';
 import { createUI } from './ui.js';
 
 const canvas = document.getElementById('world');
@@ -45,6 +46,7 @@ function startGame(m) {
   ui.hideOverlay();
   started = true;
   ui.log('info', `Episode ${totalEps} · ${mode.toUpperCase()}`);
+  expertReset();
   if (dbg.enabled) startRun(dbg);
 }
 
@@ -150,7 +152,25 @@ document.getElementById('btnWipe').onclick = () => {
   ui.log('warn', 'AI weights wiped');
   if (started) startGame(mode);
 };
-document.getElementById('btnDebug').onclick = () => startDebugBatch();
+function bindDebugButtons() {
+  const ids = ['btnDebug', 'btnDebugTop', 'btnDebugOverlay', 'btnDebugHelp'];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el) el.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // open side on mobile so user sees progress in log
+      const side = document.getElementById('side');
+      if (side && window.innerWidth <= 960) {
+        side.classList.add('open');
+        side.style.display = 'flex';
+      }
+      startDebugBatch();
+    };
+  }
+}
+bindDebugButtons();
+
 document.getElementById('btnSide').onclick = (e) => {
   e.preventDefault();
   e.stopPropagation();
@@ -219,10 +239,9 @@ function loop(t) {
         clearFire: () => { fireQueued = false; },
         onLanding: (st, plat) => { if (dbg.enabled) logLanding(dbg, st, plat); },
         onDecision: (st, a, exp) => {
-          if (!dbg.enabled) return;
-          // log always on DOUBLE/FIRE, else every 8 frames
-          if (a === 3 || a === 4 || (st.frame % 8 === 0)) {
-            logDecision(dbg, st, a, { reason: exp.reason || '', reach: null });
+          if (!dbg.enabled || !dbg.current) return;
+          if (a === 3 || a === 4 || st.frame % 4 === 0) {
+            logDecision(dbg, st, a, { reason: (exp && exp.reason) || '', reach: null });
           }
         },
         onSample: (st) => { if (dbg.enabled) logSample(dbg, st); }
@@ -313,8 +332,9 @@ function startDebugBatch() {
   dbg.batchTarget = 10;
   dbg.runs = [];
   dbg.showGrid = true;
-  if (typeof log === 'function') log('warn', 'DEBUG BATCH: 10 AI runs starting');
-  else console.log('DEBUG BATCH start');
+  expertReset();
+  console.log('DEBUG BATCH: 10 AI runs');
+  try { ui.log('warn', 'DEBUG BATCH ×10 started'); } catch(e) {}
   startGame('ai');
   startRun(dbg);
 }

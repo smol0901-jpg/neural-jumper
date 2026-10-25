@@ -9,7 +9,7 @@ import { diff, computeDifficulty, applyLevelFeatures, levelFromScore, milestoneM
 import { makePlatform, makeEnemy } from './world.js';
 import { decide, trainBatch, setBestScore } from './network.js';
 import { clamp } from './utils.js';
-import { expertAction } from './expert.js';
+import { expertAction, expertNotifyLanding } from './expert.js';
 
 function reachable(player, p) {
   const dx = Math.abs((p.x + p.w / 2) - player.x);
@@ -101,6 +101,7 @@ export function physicsStep(state, opts) {
           // success toward target?
           if (state.currentTarget === p) state.failJumps = 0;
           if (onLanding) onLanding(state, p);
+          expertNotifyLanding(p, state.score);
           break;
         }
       }
