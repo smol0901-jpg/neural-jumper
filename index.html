@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Neural Jumper</title>
+<style>
+:root {
+  --bg: #0a0e13;
+  --panel: #0f141b;
+  --panel2: #121821;
+  --line: rgba(255,255,255,.08);
+  --txt: #e2e8f0;
+  --dim: #94a3b8;
+  --mute: #64748b;
+  --lime: #a3e635;
+  --rose: #fb7185;
+  --cyan: #22d3ee;
+  --amber: #f59e0b;
+  --violet: #a78bfa;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --sans: Inter, system-ui, -apple-system, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--txt); font-family: var(--sans); }
+body { display: flex; flex-direction: column; }
+
+/* Top bar */
+.top {
+  height: 48px; display: flex; align-items: center; gap: 12px;
+  padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line);
+  z-index: 10; flex-shrink: 0;
+}
+.brand { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.brand svg { width: 20px; height: 20px; stroke: var(--cyan); fill: none; stroke-width: 1.8; }
+.badge { font-size: 10px; color: var(--mute); padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; }
+.spacer { flex: 1; }
+.btn {
+  height: 30px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel2); color: var(--dim); font-family: var(--mono); font-size: 11px;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: .15s;
+}
+.btn:hover { color: var(--txt); border-color: rgba(255,255,255,.18); }
+.btn.active { color: var(--cyan); border-color: rgba(34,211,238,.4); background: rgba(34,211,238,.08); }
+.btn.lime { color: var(--lime); border-color: rgba(163,230,53,.35); }
+.btn.rose { color: var(--rose); }
+.score-box { font-family: var(--mono); font-size: 14px; color: var(--cyan); min-width: 90px; text-align: right; }
+
+/* Main layout */
+.main {
+  flex: 1; display: grid; grid-template-columns: 1fr 320px; min-height: 0;
+}
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+  .side { display: none; }
+  .side.open { display: flex; position: absolute; inset: 48px 0 0 0; z-index: 20; background: var(--bg); }
+}
+
+/* Game area */
+.game-wrap {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 20%, rgba(34,211,238,.06), transparent 60%);
+  overflow: hidden;
+}
+canvas#world {
+  display: block; max-width: 100%; max-height: 100%;
+  border-radius: 8px; box-shadow: 0 0 0 1px var(--line);
+  image-rendering: pixelated;
+}
+.hud {
+  position: absolute; top: 12px; left: 12px; right: 12px;
+  display: flex; justify-content: space-between; pointer-events: none;
+  font-family: var(--mono); font-size: 12px;
+}
+.hud .left, .hud .right { display: flex; flex-direction: column; gap: 4px; }
+.hud .val { color: var(--cyan); font-weight: 600; }
+.hud .label { color: var(--mute); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(5,8,14,.82); backdrop-filter: blur(6px); z-index: 5;
+  font-family: var(--mono); text-align: center; padding: 24px;
+}
+.overlay h1 { font-size: 28px; margin-bottom: 8px; color: var(--txt); }
+.overlay .sub { color: var(--dim); margin-bottom: 24px; font-size: 13px; max-width: 320px; line-height: 1.5; }
+.overlay .big-score { font-size: 48px; color: var(--cyan); margin: 12px 0; }
+.overlay .btn { margin: 6px; height: 40px; padding: 0 20px; font-size: 13px; }
+
+/* Side panel */
+.side {
+  background: var(--panel); border-left: 1px solid var(--line);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.side-head {
+  padding: 12px 14px; border-bottom: 1px solid var(--line);
+  font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--mute);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.tabs { display: flex; gap: 4px; }
+.tab { padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; }
+.tab.active { background: rgba(34,211,238,.12); color: var(--cyan); }
+.side-body { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 14px; }
+
+.card {
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+}
+.card-title { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); margin-bottom: 8px; }
+.stat-row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12px; margin: 4px 0; }
+.stat-row .k { color: var(--mute); }
+.stat-row .v { color: var(--txt); }
+.stat-row .v.lime { color: var(--lime); }
+.stat-row .v.cyan { color: var(--cyan); }
+.stat-row .v.rose { color: var(--rose); }
+
+.controls-help { font-size: 12px; line-height: 1.6; color: var(--dim); }
+.controls-help kbd {
+  display: inline-block; padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px;
+  background: #0a0e13; font-family: var(--mono); font-size: 11px; color: var(--cyan);
+}
+
+.log {
+  font-family: var(--mono); font-size: 11px; max-height: 180px; overflow-y: auto;
+  background: #080c12; border-radius: 6px; padding: 8px;
+}
+.log-line { margin: 2px 0; color: var(--dim); }
+.log-line .t { color: var(--mute); margin-right: 6px; }
+.log-line.ok { color: var(--lime); }
+.log-line.warn { color: var(--amber); }
+.log-line.fail { color: var(--rose); }
+.log-line.ai { color: var(--cyan); }
+
+/* Bottom controls */
+.bottom {
+  height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 14px;
+  background: var(--panel); border-top: 1px solid var(--line); flex-shrink: 0;
+}
+.bottom .hint { font-size: 11px; color: var(--mute); margin-left: auto; }
+
+/* Mobile */
+@media (max-width: 600px) {
+  .top { height: 44px; padding: 0 10px; }
+  .brand span:last-child { display: none; }
+  .score-box { font-size: 13px; }
+  canvas#world { border-radius: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <svg viewBox="0 0 24 24"><path d="M4 18 L12 4 L20 18 Z M8 18 L12 10 L16 18"/></svg>
+    <span>Neural Jumper</span>
+    <span class="badge">v1.0</span>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="btnMode">AI MODE</button>
+  <button class="btn" id="btnLearn">LEARN ON</button>
+  <button class="btn" id="btnPause">PAUSE</button>
+  <div class="score-box">SCORE <span id="topScore">0</span></div>
+</div>
+
+<div class="main">
+  <div class="game-wrap" id="gameWrap">
+    <canvas id="world" width="420" height="620"></canvas>
+
+    <div class="hud">
+      <div class="left">
+        <div><span class="label">Height</span> <span class="val" id="hudHeight">0</span></div>
+        <div><span class="label">Level</span> <span class="val" id="hudLevel">1</span></div>
+      </div>
+      <div class="right" style="text-align:right">
+        <div><span class="label">Best</span> <span class="val" id="hudBest">0</span></div>
+        <div><span class="label">Jumps</span> <span class="val" id="hudJumps">0</span></div>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <h1>Neural Jumper</h1>
+      <p class="sub">Climb as high as you can.<br>Play yourself or watch the neural net learn.</p>
+      <button class="btn active" id="btnStart">START GAME</button>
+      <button class="btn" id="btnWatchAI">WATCH AI</button>
+      <p class="sub" style="margin-top:20px;font-size:11px">
+        <kbd>←</kbd> <kbd>→</kbd> move &nbsp; <kbd>SPACE</kbd> double-jump<br>
+        Features unlock every 500 points
+      </p>
+    </div>
+  </div>
+
+  <aside class="side" id="side">
+    <div class="side-head">
+      <span>INFO</span>
+      <div class="tabs">
+        <span class="tab active" data-tab="stats">STATS</span>
+        <span class="tab" data-tab="help">HELP</span>
+        <span class="tab" data-tab="log">LOG</span>
+      </div>
+    </div>
+    <div class="side-body">
+      <div id="panelStats">
+        <div class="card">
+          <div class="card-title">Session</div>
+          <div class="stat-row"><span class="k">Score</span><span class="v cyan" id="sScore">0</span></div>
+          <div class="stat-row"><span class="k">Best</span><span class="v lime" id="sBest">0</span></div>
+          <div class="stat-row"><span class="k">Episodes</span><span class="v" id="sEps">0</span></div>
+          <div class="stat-row"><span class="k">Level</span><span class="v" id="sLevel">1</span></div>
+          <div class="stat-row"><span class="k">Features</span><span class="v" id="sFeats">none</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">AI / Learning</div>
+          <div class="stat-row"><span class="k">Mode</span><span class="v" id="sMode">Human</span></div>
+          <div class="stat-row"><span class="k">Learning</span><span class="v" id="sLearn">ON</span></div>
+          <div class="stat-row"><span class="k">Updates</span><span class="v" id="sUpdates">0</span></div>
+          <div class="stat-row"><span class="k">Smartness</span><span class="v lime" id="sSmart">0</span></div>
+          <div class="stat-row"><span class="k">Loss</span><span class="v rose" id="sLoss">—</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Controls</div>
+          <div class="controls-help">
+            <div><kbd>←</kbd> <kbd>A</kbd> / <kbd>→</kbd> <kbd>D</kbd> — move</div>
+            <div><kbd>SPACE</kbd> / <kbd>W</kbd> — double jump</div>
+            <div><kbd>P</kbd> — pause</div>
+            <div><kbd>R</kbd> — restart</div>
+            <div><kbd>M</kbd> — toggle AI / Human</div>
+            <div><kbd>L</kbd> — toggle learning</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="panelHelp" style="display:none">
+        <div class="card">
+          <div class="card-title">How to play</div>
+          <div class="controls-help">
+            The goal is simple: jump higher and higher.<br><br>
+            Land on platforms to bounce. Use double-jump when the gap is too big.<br><br>
+            Every 500 points a new feature unlocks:<br>
+            • Moving platforms<br>
+            • Vanishing platforms<br>
+            • Small / narrow platforms<br>
+            • Springs (super jump)<br>
+            • Wind<br>
+            • Darkness<br><br>
+            You can play yourself or let the neural network play and learn.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">About the AI</div>
+          <div class="controls-help">
+            The agent uses a small neural net (17 → 16 → 4) trained with REINFORCE + entropy bonus.<br><br>
+            Reward = height gained. It learns purely in the browser and saves progress in localStorage.
+          </div>
+        </div>
+      </div>
+
+      <div id="panelLog" style="display:none">
+        <div class="card">
+          <div class="card-title">Event log</div>
+          <div class="log" id="log"></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="bottom">
+  <button class="btn" id="btnReset">RESTART</button>
+  <button class="btn" id="btnWipe">WIPE AI</button>
+  <button class="btn" id="btnSide">INFO</button>
+  <span class="hint">Made for fun · pure browser · no server</span>
+</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   Neural Jumper — polished playable version of NA++ RL-LAB
+   ============================================================ */
+
+const W = 420, H = 620;
+const GRAV = 0.5, JUMP = -13, SPRING_JUMP = -19, DOUBLE_JUMP = -13.5;
+const ACC = 0.95, MAXVX = 7.2, FRICTION = 0.86;
+const TICK = 1000 / 60;
+const CAM_LINE = H * 0.42;
+const DANGER_START = H * 0.62;
+const DANGER_END = H - 30;
+const EPISODE_TIMEOUT = 1800;
+const TRAIN_EVERY = 280;
+
+const N_IN = 17, N_HID = 16, N_OUT = 4;
+const FEATURES = ['moving','vanishing','small','narrow','springs','wind','dark'];
+const FEATURE_NAMES = {
+  moving: 'moving platforms', vanishing: 'vanishing platforms',
+  small: 'small platforms', narrow: 'narrow platforms',
+  springs: 'springs', wind: 'wind', dark: 'darkness'
+};
+
+// ---------- RNG ----------
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+let rng = Math.random, seed = 42;
+function setSeed(s) { seed = s >>> 0; rng = mulberry32(seed); }
+
+// ---------- State ----------
+let player, platforms, starfield;
+let score = 0, bestScore = 0, jumps = 0, doubleJumps = 0;
+let frame = 0, epStep = 0, episode = 0, totalEps = 0;
+let gameOver = false, deadTimer = 0, level = 1;
+let activeFeatures = new Set(), windAccel = 0;
+let stuck = 0, urgency = 0;
+let currentTarget = null, currentSafe = null;
+let mode = 'human'; // 'human' | 'ai'
+let learning = true;
+let paused = false, started = false;
+let keys = { left: false, right: false, jump: false };
+let humanJumpQueued = false;
+
+// RL
+let W1, B1, W2, B2;
+let episodeBuffer = [];
+let totalUpdates = 0, lastLoss = 0;
+let rewardHistory = [], smartHistory = [];
+let learnRate = 0.005, gamma = 0.99, entropyCoef = 0.02, temp = 2.0;
+const LEARN_KEY = 'neural-jumper-v1';
+
+// ---------- DOM ----------
+const canvas = document.getElementById('world');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const logEl = document.getElementById('log');
+
+// ---------- Network ----------
+function handCraftedInit() {
+  const zero = () => new Array(N_IN).fill(0);
+  const recipes = [
+    r => { r[0] = 3; }, r => { r[0] = -3; }, r => { r[3] = -1/8; }, r => { r[2] = 1/6; },
+    r => { r[4] = -1; }, r => { r[4] = 1; }, r => { r[5] = 3; }, r => { r[6] = 3; },
+    r => { r[8] = 3; }, r => { r[9] = 3; }, r => { r[10] = 3; }, r => { r[11] = 3; },
+    r => { r[12] = 1.5; }, r => { r[13] = 4; }, r => { r[14] = 2; }, r => { r[15] = 1.5; }
+  ];
+  W1 = []; B1 = [];
+  for (let i = 0; i < N_HID; i++) {
+    const row = zero(); recipes[i](row); W1.push(row); B1.push(0);
+  }
+  W2 = [
+    [0,5,0,0,0.5,0,0,0,0,4,0,4,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2.5],
+    [5,0,0,0,0,0.5,0,0,4,0,4,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,4,2,0]
+  ];
+  B2 = [0.2, -1.0, 0.2, -1.2];
+}
+
+function buildWeights(jit = 0.25) {
+  handCraftedInit();
+  if (jit) {
+    for (let i = 0; i < N_HID; i++)
+      for (let j = 0; j < N_IN; j++) W1[i][j] += (rng() - 0.5) * jit;
+    for (let i = 0; i < N_OUT; i++)
+      for (let j = 0; j < N_HID; j++) W2[i][j] += (rng() - 0.5) * jit * 0.4;
+  }
+}
+
+function forward(x) {
+  const h = new Array(N_HID), logits = new Array(N_OUT);
+  for (let i = 0; i < N_HID; i++) {
+    let s = B1[i];
+    for (let j = 0; j < N_IN; j++) s += W1[i][j] * x[j];
+    h[i] = Math.tanh(s);
+  }
+  for (let i = 0; i < N_OUT; i++) {
+    let s = B2[i];
+    for (let j = 0; j < N_HID; j++) s += W2[i][j] * h[j];
+    logits[i] = s;
+  }
+  return { x: x.slice(), h, logits };
+}
+
+function softmax(logits, t = 1) {
+  const m = Math.max(...logits);
+  const e = logits.map(l => Math.exp((l - m) / t));
+  const sum = e.reduce((a, b) => a + b, 0);
+  return e.map(v => v / sum);
+}
+
+function sample(p) {
+  const r = rng();
+  let c = 0;
+  for (let i = 0; i < p.length; i++) {
+    c += p[i];
+    if (r < c) return i;
+  }
+  return p.length - 1;
+}
+
+function entropy(p) {
+  let h = 0;
+  for (const v of p) if (v > 1e-9) h -= v * Math.log(v);
+  return h;
+}
+
+function trainBatch() {
+  if (!learning || episodeBuffer.length < 10) return;
+  const T = episodeBuffer.length;
+  const rets = new Array(T);
+  let G = 0;
+  for (let t = T - 1; t >= 0; t--) {
+    G = episodeBuffer[t].reward + gamma * G;
+    rets[t] = G;
+  }
+  const mean = rets.reduce((a, b) => a + b, 0) / T;
+  let v = 0;
+  for (const r of rets) v += (r - mean) ** 2;
+  const std = Math.sqrt(v / T) + 1e-6;
+  for (let t = 0; t < T; t++) rets[t] = (rets[t] - mean) / std;
+
+  const dW1 = W1.map(r => r.map(() => 0));
+  const dB1 = B1.map(() => 0);
+  const dW2 = W2.map(r => r.map(() => 0));
+  const dB2 = B2.map(() => 0);
+  let totalLoss = 0;
+
+  for (let t = 0; t < T; t++) {
+    const tr = episodeBuffer[t];
+    const p = tr.probs, a = tr.action, Gt = rets[t];
+    const Hh = entropy(p);
+    const dLogits = new Array(N_OUT);
+    for (let k = 0; k < N_OUT; k++) {
+      const oh = k === a ? 1 : 0;
+      dLogits[k] = (p[k] - oh) * Gt + entropyCoef * p[k] * (Math.log(p[k] + 1e-9) + Hh);
+    }
+    totalLoss += -Math.log(p[a] + 1e-9) * Gt - entropyCoef * Hh;
+
+    const dHid = new Array(N_HID).fill(0);
+    for (let j = 0; j < N_HID; j++) {
+      let s = 0;
+      for (let k = 0; k < N_OUT; k++) s += dLogits[k] * W2[k][j];
+      dHid[j] = s * (1 - tr.h[j] * tr.h[j]);
+    }
+    for (let k = 0; k < N_OUT; k++) {
+      dB2[k] += dLogits[k];
+      for (let j = 0; j < N_HID; j++) dW2[k][j] += dLogits[k] * tr.h[j];
+    }
+    for (let j = 0; j < N_HID; j++) {
+      dB1[j] += dHid[j];
+      for (let i = 0; i < N_IN; i++) dW1[j][i] += dHid[j] * tr.x[i];
+    }
+  }
+
+  const clip = 1.0;
+  for (let i = 0; i < N_HID; i++) {
+    for (let j = 0; j < N_IN; j++) {
+      dW1[i][j] = Math.max(-clip, Math.min(clip, dW1[i][j] / T));
+      W1[i][j] -= learnRate * dW1[i][j];
+    }
+    dB1[i] = Math.max(-clip, Math.min(clip, dB1[i] / T));
+    B1[i] -= learnRate * dB1[i];
+  }
+  for (let i = 0; i < N_OUT; i++) {
+    for (let j = 0; j < N_HID; j++) {
+      dW2[i][j] = Math.max(-clip, Math.min(clip, dW2[i][j] / T));
+      W2[i][j] -= learnRate * dW2[i][j];
+    }
+    dB2[i] = Math.max(-clip, Math.min(clip, dB2[i] / T));
+    B2[i] -= learnRate * dB2[i];
+  }
+
+  lastLoss = totalLoss / T;
+  totalUpdates++;
+  episodeBuffer = [];
+  const recent = rewardHistory.slice(-30);
+  const smart = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : 0;
+  smartHistory.push(smart);
+  if (smartHistory.length > 200) smartHistory.shift();
+  log('ok', `AI update #${totalUpdates}  loss=${lastLoss.toFixed(3)}  smart=${smart.toFixed(0)}`);
+  if (totalUpdates % 4 === 0) saveWeights();
+}
+
+function saveWeights() {
+  try {
+    localStorage.setItem(LEARN_KEY, JSON.stringify({
+      W1, B1, W2, B2, totalUpdates, bestScore, smartHistory: smartHistory.slice(-100)
+    }));
+  } catch (e) {}
+}
+
+function loadWeights() {
+  try {
+    const raw = localStorage.getItem(LEARN_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (!s.W1 || s.W1.length !== N_HID) return false;
+    W1 = s.W1; B1 = s.B1; W2 = s.W2; B2 = s.B2;
+    totalUpdates = s.totalUpdates || 0;
+    bestScore = s.bestScore || 0;
+    smartHistory = s.smartHistory || [];
+    return true;
+  } catch (e) { return false; }
+}
+
+function wipeWeights() {
+  localStorage.removeItem(LEARN_KEY);
+  totalUpdates = 0;
+  smartHistory = [];
+  buildWeights(0.3);
+  log('warn', 'AI weights wiped');
+}
+
+// ---------- World ----------
+function makePlatform(y, ref) {
+  let pw = 56 + rng() * 36;
+  if (activeFeatures.has('small')) pw *= 0.72;
+  if (activeFeatures.has('narrow')) pw *= 0.55;
+  pw = Math.max(26, pw);
+  let x;
+  if (ref) {
+    const rc = (ref.baseX !== undefined ? ref.baseX : ref.x) + ref.w / 2;
+    const maxD = rng() < 0.18 ? 290 : 190;
+    const dir = rng() < 0.5 ? -1 : 1;
+    const off = 38 + rng() * (maxD - 38);
+    x = rc + dir * off - pw / 2;
+    x = Math.max(6, Math.min(W - pw - 6, x));
+  } else {
+    x = 8 + rng() * (W - pw - 16);
+  }
+  const p = { x, y, w: pw, h: 12, flash: 0, touched: false, life: 1, dead: false, kind: 'normal' };
+  if (activeFeatures.has('moving')) {
+    p.moveAmp = 20 + rng() * 34;
+    p.moveSpeed = (0.018 + rng() * 0.03) * (rng() < 0.5 ? 1 : -1);
+    p.movePhase = rng() * Math.PI * 2;
+    p.baseX = p.x;
+  }
+  if (activeFeatures.has('vanishing')) p.vanishing = true;
+  if (activeFeatures.has('springs') && rng() < 0.14) { p.spring = true; p.kind = 'spring'; }
+  if (activeFeatures.has('dark')) p.dark = true;
+  return p;
+}
+
+function resetWorld() {
+  player = {
+    x: W / 2, y: H - 120, w: 28, h: 28,
+    vx: 0, vy: -12, jumpsLeft: 1,
+    lastBounce: -100, maxHeight: 0,
+    _lastScore: 0, _lastEpRew: 0
+  };
+  platforms = [{ x: W / 2 - 55, y: H - 55, w: 110, h: 12, flash: 0, touched: false, life: 1, kind: 'normal' }];
+  let ref = platforms[0], y = ref.y;
+  while (y > -900) {
+    const sp = rng() < 0.14 ? 125 + rng() * 55 : 68 + rng() * 38;
+    y -= sp;
+    const p = makePlatform(y, ref);
+    platforms.push(p);
+    ref = p;
+  }
+  starfield = [];
+  for (let i = 0; i < 80; i++) {
+    starfield.push({ x: rng() * W, y: rng() * H, r: rng() * 1.4 + 0.3, s: rng() * 0.55 + 0.12 });
+  }
+  score = 0; jumps = 0; doubleJumps = 0; frame = 0; epStep = 0;
+  gameOver = false; deadTimer = 0; level = 1;
+  activeFeatures = new Set(); windAccel = 0;
+  stuck = 0; urgency = 0;
+  currentTarget = null; currentSafe = null;
+  episodeBuffer = [];
+  humanJumpQueued = false;
+}
+
+function endEpisode(reason) {
+  rewardHistory.push(score);
+  if (rewardHistory.length > 80) rewardHistory.shift();
+  if (score > bestScore) {
+    bestScore = score;
+    log('ok', `New best: ${score}`);
+  }
+  trainBatch();
+  totalEps++;
+  log('fail', `Episode ended · ${reason} · score ${score}`);
+  gameOver = true;
+  deadTimer = 0;
+  showGameOver(reason);
+}
+
+function newEpisode() {
+  episode++;
+  resetWorld();
+  hideOverlay();
+  log('info', `Episode ${episode} started (${mode})`);
+}
+
+// ---------- AI Think ----------
+function think() {
+  // stuck / urgency
+  if (score > player._lastScore + 0.4) stuck = Math.max(0, stuck - 0.18);
+  else stuck = Math.min(1, stuck + 0.007);
+
+  let safePlat = null, safeDist = Infinity;
+  for (const p of platforms) {
+    if (p.y > player.y - 50 && p.y < player.y + 400) {
+      const d = Math.abs((p.x + p.w / 2) - player.x) * 0.5 + Math.abs(p.y - player.y) * 0.3;
+      if (d < safeDist) { safeDist = d; safePlat = p; }
+    }
+  }
+  currentSafe = safePlat;
+
+  urgency = 0;
+  if (player.y > DANGER_START) {
+    urgency = Math.min(1, (player.y - DANGER_START) / (DANGER_END - DANGER_START));
+  }
+
+  let target = null;
+  if (urgency > 0.82 && safePlat) {
+    target = safePlat;
+  } else {
+    let best = Infinity;
+    for (const p of platforms) {
+      if (p.y < player.y - 18) {
+        const dx = (p.x + p.w / 2) - player.x;
+        const dy = player.y - p.y;
+        if (dy > 500) continue;
+        const s = Math.abs(dx) * 0.55 + dy * 0.4;
+        if (s < best) { best = s; target = p; }
+      }
+    }
+  }
+  currentTarget = target;
+
+  let dx = 0, dy = 1, distN = 1, need2 = 0, gapN = 1, edge = 0;
+  if (target) {
+    const tcx = target.x + target.w / 2;
+    const ddx = tcx - player.x;
+    const ddy = target.y - player.y;
+    dx = ddx / (W / 2);
+    dy = -ddy / 300;
+    distN = Math.min(1, Math.hypot(ddx, ddy) / 380);
+    const hh = -ddy, hd = Math.abs(ddx);
+    const maxH = (JUMP * JUMP) / (2 * GRAV);
+    if (hh > maxH * 0.9 || hd > 140) need2 = 1;
+    else if (player.jumpsLeft > 0 && player.vy > 0 && hh > maxH * 0.5) need2 = 0.45;
+  }
+  dx = Math.max(-1, Math.min(1, dx));
+  dy = Math.max(-1, Math.min(1, dy));
+
+  const vxn = Math.max(-1, Math.min(1, player.vx / MAXVX));
+  const vyn = Math.max(-1, Math.min(1, player.vy / 16));
+  const xn = (player.x / W) * 2 - 1;
+
+  const inputs = [
+    dx, dy, vxn, vyn, xn,
+    stuck, urgency, Math.abs(dx),
+    dx * stuck, -dx * stuck,
+    dx * urgency, -dx * urgency,
+    edge, need2, gapN, player.jumpsLeft, 1
+  ];
+
+  const cache = forward(inputs);
+  let action, probs;
+  if (learning) {
+    probs = softmax(cache.logits, temp);
+    action = sample(probs);
+  } else {
+    // greedy
+    const y = cache.logits;
+    action = 0;
+    if (y[1] > y[0] && y[1] > y[2]) action = 1;
+    else if (y[2] > y[0]) action = 2;
+    if (y[3] > Math.max(y[0], y[1], y[2])) action = 3;
+    probs = [0, 0, 0, 0];
+    probs[action] = 1;
+  }
+  return { action, probs, cache, inputs };
+}
+
+// ---------- Physics ----------
+function physics() {
+  if (!started || paused) return;
+  frame++;
+  epStep++;
+
+  if (gameOver) {
+    deadTimer++;
+    if (deadTimer > 90 && mode === 'ai') newEpisode();
+    return;
+  }
+  if (epStep >= EPISODE_TIMEOUT) {
+    endEpisode('timeout');
+    return;
+  }
+
+  let mx = 0;
+  let doDouble = false;
+  let decision = null;
+
+  if (mode === 'human') {
+    if (keys.left) mx = -1;
+    if (keys.right) mx = 1;
+    if (humanJumpQueued && player.jumpsLeft > 0) {
+      doDouble = true;
+      humanJumpQueued = false;
+    }
+  } else {
+    decision = think();
+    const a = decision.action;
+    if (a === 0) mx = -1;
+    else if (a === 2) mx = 1;
+    if (a === 3) doDouble = true;
+
+    // emergency override
+    if (urgency > 0.85 && currentSafe) {
+      const ex = (currentSafe.x + currentSafe.w / 2) - player.x;
+      mx = ex > 8 ? 1 : (ex < -8 ? -1 : 0);
+    }
+  }
+
+  // double jump
+  const airborne = frame - player.lastBounce > 7;
+  if (doDouble && player.jumpsLeft > 0 && airborne && player.vy > -11) {
+    player.vy = DOUBLE_JUMP;
+    player.jumpsLeft = 0;
+    doubleJumps++;
+    if (mode === 'ai') log('ai', 'double jump');
+  }
+
+  // horizontal
+  player.vx += mx * ACC;
+  if (activeFeatures.has('wind')) player.vx += windAccel;
+  player.vx *= FRICTION;
+  player.vx = Math.max(-MAXVX, Math.min(MAXVX, player.vx));
+
+  // vertical
+  player.vy += GRAV;
+  const prevY = player.y;
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // wrap
+  if (player.x < -player.w / 2) player.x = W + player.w / 2;
+  if (player.x > W + player.w / 2) player.x = -player.w / 2;
+
+  // platform collision
+  if (player.vy > 0) {
+    const prevBottom = prevY + player.h / 2;
+    const bottom = player.y + player.h / 2;
+    for (const p of platforms) {
+      if (p.dead) continue;
+      if (prevBottom <= p.y && bottom >= p.y) {
+        if (player.x + player.w / 2 > p.x && player.x - player.w / 2 < p.x + p.w) {
+          player.vy = p.spring ? SPRING_JUMP : JUMP;
+          player.y = p.y - player.h / 2;
+          jumps++;
+          p.flash = 1;
+          if (p.vanishing) p.touched = true;
+          player.jumpsLeft = 1;
+          player.lastBounce = frame;
+          break;
+        }
+      }
+    }
+  }
+
+  // platform updates
+  for (const p of platforms) {
+    if (p.moveAmp) {
+      p.movePhase += p.moveSpeed;
+      p.x = p.baseX + Math.sin(p.movePhase) * p.moveAmp;
+      p.x = Math.max(4, Math.min(W - p.w - 4, p.x));
+    }
+    if (p.vanishing && p.touched) {
+      p.life -= 0.035;
+      if (p.life <= 0) p.dead = true;
+    }
+    if (p.flash) p.flash *= 0.86;
+  }
+  platforms = platforms.filter(p => !p.dead && p.y < H + 80);
+
+  // camera / score
+  if (player.y < CAM_LINE) {
+    const d = CAM_LINE - player.y;
+    player.y = CAM_LINE;
+    for (const p of platforms) p.y += d;
+    score += Math.round(d);
+    if (score > player.maxHeight) player.maxHeight = score;
+    checkLevel();
+  }
+
+  // reward for AI
+  const scoreDelta = score - player._lastScore;
+  let stepRew = 0;
+  if (scoreDelta > 0) {
+    stepRew = scoreDelta * 0.45;
+    player._lastScore = score;
+  }
+  stepRew -= 0.0015; // small time penalty
+
+  if (mode === 'ai' && learning && decision) {
+    episodeBuffer.push({
+      x: decision.cache.x,
+      h: decision.cache.h.slice(),
+      probs: decision.probs.slice(),
+      action: decision.action,
+      reward: stepRew
+    });
+    if (episodeBuffer.length > 1800) episodeBuffer.shift();
+    if (epStep % TRAIN_EVERY === 0 && episodeBuffer.length >= 40) trainBatch();
+  }
+
+  // spawn higher platforms
+  let top = platforms[0];
+  for (const p of platforms) if (p.y < top.y) top = p;
+  let topY = top.y;
+  while (topY > -280) {
+    const sp = rng() < 0.14 ? 125 + rng() * 55 : 68 + rng() * 38;
+    topY -= sp;
+    const p = makePlatform(topY, top);
+    platforms.push(p);
+    top = p;
+  }
+
+  // death
+  if (player.y - player.h / 2 > H + 50) {
+    endEpisode('fell');
+  }
+
+  updateUI();
+}
+
+function checkLevel() {
+  const lvl = Math.floor(score / 500) + 1;
+  if (lvl > level) {
+    level = lvl;
+    log('ok', `Level ${level}`);
+    const avail = FEATURES.filter(f => !activeFeatures.has(f));
+    if (avail.length === 0) {
+      for (const p of platforms) p.w = Math.max(22, p.w * 0.92);
+      return;
+    }
+    const cnt = Math.min(avail.length, 1 + (rng() < 0.45 ? 1 : 0));
+    for (let i = 0; i < cnt; i++) {
+      const idx = Math.floor(rng() * avail.length);
+      const f = avail.splice(idx, 1)[0];
+      activeFeatures.add(f);
+      log('warn', `Unlocked: ${FEATURE_NAMES[f]}`);
+      if (f === 'wind') {
+        windAccel = (rng() < 0.5 ? 1 : -1) * (0.04 + rng() * 0.08);
+      }
+    }
+  }
+}
+
+// ---------- Draw ----------
+function draw() {
+  const c = ctx;
+  c.fillStyle = '#0a0e13';
+  c.fillRect(0, 0, W, H);
+
+  // grid
+  c.strokeStyle = 'rgba(255,255,255,.025)';
+  c.lineWidth = 1;
+  for (let x = 0; x < W; x += 24) {
+    c.beginPath(); c.moveTo(x + 0.5, 0); c.lineTo(x + 0.5, H); c.stroke();
+  }
+  for (let y = 0; y < H; y += 24) {
+    c.beginPath(); c.moveTo(0, y + 0.5); c.lineTo(W, y + 0.5); c.stroke();
+  }
+
+  // stars
+  for (const s of starfield) {
+    const y = ((s.y + score * 0.28 * s.s) % H + H) % H;
+    c.fillStyle = 'rgba(140,190,255,.13)';
+    c.fillRect(s.x, y, s.r * 1.5, s.r * 1.5);
+  }
+
+  // target line (AI only)
+  if (mode === 'ai' && currentTarget && !gameOver) {
+    c.save();
+    c.strokeStyle = 'rgba(34,211,238,.22)';
+    c.lineWidth = 1;
+    c.setLineDash([4, 5]);
+    c.beginPath();
+    c.moveTo(player.x, player.y);
+    c.lineTo(currentTarget.x + currentTarget.w / 2, currentTarget.y);
+    c.stroke();
+    c.restore();
+  }
+
+  // platforms
+  for (const p of platforms) {
+    const isT = mode === 'ai' && p === currentTarget;
+    const isS = p === currentSafe && urgency > 0.8;
+    let stroke = '#3a4454';
+    if (isS) stroke = '#f59e0b';
+    else if (isT) stroke = '#22d3ee';
+
+    const alpha = p.vanishing && p.touched ? Math.max(0.12, p.life) : 1;
+    c.save();
+    c.globalAlpha = alpha;
+    c.fillStyle = '#121821';
+    c.strokeStyle = stroke;
+    c.lineWidth = isT || isS ? 1.8 : 1.1;
+    if (p.vanishing && !p.touched) c.setLineDash([3, 3]);
+    roundRect(c, p.x, p.y, p.w, p.h, 3);
+    c.fill();
+    c.stroke();
+    c.setLineDash([]);
+
+    if (p.spring) {
+      c.fillStyle = '#a3e635';
+      c.beginPath();
+      c.arc(p.x + p.w / 2, p.y + p.h / 2, 2.6, 0, Math.PI * 2);
+      c.fill();
+    }
+    if (isT) {
+      c.strokeStyle = stroke;
+      c.lineWidth = 1.3;
+      c.beginPath();
+      c.ellipse(p.x + p.w / 2, p.y + 5, p.w / 2 + 7, 9, 0, 0, Math.PI * 2);
+      c.stroke();
+    }
+    if (p.flash > 0.03) {
+      c.strokeStyle = `rgba(255,255,255,${p.flash * 0.5})`;
+      c.lineWidth = 1 + p.flash * 2.2;
+      roundRect(c, p.x, p.y, p.w, p.h, 3);
+      c.stroke();
+    }
+    c.restore();
+  }
+
+  // darkness
+  if (activeFeatures.has('dark') && !gameOver) {
+    const g = c.createRadialGradient(player.x, player.y, 55, player.x, player.y, 300);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,.87)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, W, H);
+  }
+
+  // player
+  const px = player.x, py = player.y;
+  c.save();
+  c.translate(px, py);
+  c.rotate(Math.PI / 4);
+  c.fillStyle = gameOver ? '#fb7185' : '#22d3ee';
+  c.strokeStyle = '#0a0e13';
+  c.lineWidth = 1.6;
+  c.fillRect(-player.w / 2, -player.h / 2, player.w, player.h);
+  c.strokeRect(-player.w / 2, -player.h / 2, player.w, player.h);
+  c.restore();
+
+  // jump indicator
+  c.beginPath();
+  c.arc(px, py, player.w / 2 + 7, 0, Math.PI * 2);
+  c.strokeStyle = player.jumpsLeft > 0 ? 'rgba(163,230,53,.55)' : 'rgba(100,116,139,.3)';
+  c.lineWidth = player.jumpsLeft > 0 ? 1.7 : 1;
+  c.stroke();
+
+  // velocity trail
+  if (!gameOver) {
+    c.strokeStyle = 'rgba(34,211,238,.5)';
+    c.lineWidth = 1.4;
+    c.beginPath();
+    c.moveTo(px, py);
+    c.lineTo(px + player.vx * 3.2, py + player.vy * 1.8);
+    c.stroke();
+  }
+
+  // urgency border
+  if (urgency > 0.35 && !gameOver) {
+    c.strokeStyle = urgency > 0.85 ? '#fb7185' : '#f59e0b';
+    c.lineWidth = 2.5;
+    c.globalAlpha = urgency * 0.85;
+    c.strokeRect(2, 2, W - 4, H - 4);
+    c.globalAlpha = 1;
+  }
+}
+
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+// ---------- UI ----------
+function updateUI() {
+  document.getElementById('topScore').textContent = score;
+  document.getElementById('hudHeight').textContent = score;
+  document.getElementById('hudLevel').textContent = level;
+  document.getElementById('hudBest').textContent = bestScore;
+  document.getElementById('hudJumps').textContent = jumps;
+
+  document.getElementById('sScore').textContent = score;
+  document.getElementById('sBest').textContent = bestScore;
+  document.getElementById('sEps').textContent = totalEps;
+  document.getElementById('sLevel').textContent = level;
+  document.getElementById('sFeats').textContent = activeFeatures.size
+    ? [...activeFeatures].join(', ') : 'none';
+  document.getElementById('sMode').textContent = mode === 'ai' ? 'AI' : 'Human';
+  document.getElementById('sLearn').textContent = learning ? 'ON' : 'OFF';
+  document.getElementById('sUpdates').textContent = totalUpdates;
+  const smart = smartHistory.length ? smartHistory[smartHistory.length - 1] : 0;
+  document.getElementById('sSmart').textContent = Math.round(smart);
+  document.getElementById('sLoss').textContent = lastLoss ? lastLoss.toFixed(3) : '—';
+}
+
+function log(type, msg) {
+  const d = new Date();
+  const ts = String(d.getHours()).padStart(2, '0') + ':' +
+             String(d.getMinutes()).padStart(2, '0') + ':' +
+             String(d.getSeconds()).padStart(2, '0');
+  const div = document.createElement('div');
+  div.className = 'log-line ' + type;
+  div.innerHTML = `<span class="t">${ts}</span>${msg}`;
+  logEl.appendChild(div);
+  while (logEl.children.length > 60) logEl.removeChild(logEl.firstChild);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function showGameOver(reason) {
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <h1 style="color:var(--rose)">GAME OVER</h1>
+    <div class="big-score">${score}</div>
+    <p class="sub">${reason === 'fell' ? 'You fell into the void' : 'Time ran out'} · Best: ${bestScore}</p>
+    <button class="btn active" id="btnRestart">PLAY AGAIN</button>
+    <button class="btn" id="btnWatchAI2">WATCH AI</button>
+  `;
+  document.getElementById('btnRestart').onclick = () => {
+    mode = 'human';
+    updateModeBtn();
+    newEpisode();
+  };
+  document.getElementById('btnWatchAI2').onclick = () => {
+    mode = 'ai';
+    updateModeBtn();
+    newEpisode();
+  };
+}
+
+function hideOverlay() {
+  overlay.style.display = 'none';
+  started = true;
+}
+
+function updateModeBtn() {
+  const b = document.getElementById('btnMode');
+  b.textContent = mode === 'ai' ? 'AI MODE' : 'HUMAN';
+  b.classList.toggle('active', mode === 'ai');
+  b.classList.toggle('lime', mode === 'human');
+}
+
+function updateLearnBtn() {
+  const b = document.getElementById('btnLearn');
+  b.textContent = learning ? 'LEARN ON' : 'LEARN OFF';
+  b.classList.toggle('lime', learning);
+}
+
+// ---------- Input ----------
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+  if (e.code === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+  if (e.code === 'Space' || e.key === 'w' || e.key === 'W') {
+    e.preventDefault();
+    if (mode === 'human') humanJumpQueued = true;
+  }
+  if (e.key === 'p' || e.key === 'P') togglePause();
+  if (e.key === 'r' || e.key === 'R') { mode = mode; newEpisode(); }
+  if (e.key === 'm' || e.key === 'M') toggleMode();
+  if (e.key === 'l' || e.key === 'L') toggleLearn();
+});
+
+document.addEventListener('keyup', e => {
+  if (e.code === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+  if (e.code === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+});
+
+// touch
+let touchLeft = false, touchRight = false;
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  const rect = canvas.getBoundingClientRect();
+  const x = (t.clientX - rect.left) / rect.width;
+  if (x < 0.4) { keys.left = true; touchLeft = true; }
+  else if (x > 0.6) { keys.right = true; touchRight = true; }
+  else humanJumpQueued = true;
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  if (touchLeft) { keys.left = false; touchLeft = false; }
+  if (touchRight) { keys.right = false; touchRight = false; }
+});
+
+// buttons
+document.getElementById('btnStart').onclick = () => {
+  mode = 'human';
+  updateModeBtn();
+  newEpisode();
+};
+document.getElementById('btnWatchAI').onclick = () => {
+  mode = 'ai';
+  updateModeBtn();
+  newEpisode();
+};
+document.getElementById('btnMode').onclick = toggleMode;
+document.getElementById('btnLearn').onclick = toggleLearn;
+document.getElementById('btnPause').onclick = togglePause;
+document.getElementById('btnReset').onclick = () => newEpisode();
+document.getElementById('btnWipe').onclick = () => {
+  wipeWeights();
+  if (started) newEpisode();
+};
+document.getElementById('btnSide').onclick = () => {
+  document.getElementById('side').classList.toggle('open');
+};
+
+// tabs
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    const tab = t.dataset.tab;
+    document.getElementById('panelStats').style.display = tab === 'stats' ? '' : 'none';
+    document.getElementById('panelHelp').style.display = tab === 'help' ? '' : 'none';
+    document.getElementById('panelLog').style.display = tab === 'log' ? '' : 'none';
+  };
+});
+
+function toggleMode() {
+  mode = mode === 'ai' ? 'human' : 'ai';
+  updateModeBtn();
+  log('info', `Switched to ${mode.toUpperCase()} mode`);
+  if (started && !gameOver) {
+    // keep playing
+  }
+}
+
+function toggleLearn() {
+  learning = !learning;
+  updateLearnBtn();
+  log('info', learning ? 'Learning enabled' : 'Learning frozen');
+}
+
+function togglePause() {
+  paused = !paused;
+  document.getElementById('btnPause').textContent = paused ? 'RESUME' : 'PAUSE';
+  document.getElementById('btnPause').classList.toggle('active', paused);
+}
+
+// ---------- Loop ----------
+let last = performance.now(), acc = 0;
+function loop(t) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(50, t - last);
+  last = t;
+  if (started && !paused) {
+    acc += dt;
+    let steps = 0;
+    while (acc >= TICK && steps < 6) {
+      physics();
+      acc -= TICK;
+      steps++;
+    }
+  }
+  draw();
+}
+
+// ---------- Boot ----------
+setSeed(42);
+if (!loadWeights()) {
+  buildWeights(0.28);
+  log('info', 'Fresh neural weights');
+} else {
+  log('ok', `Loaded AI · updates=${totalUpdates} · best=${bestScore}`);
+}
+resetWorld();
+updateModeBtn();
+updateLearnBtn();
+updateUI();
+requestAnimationFrame(loop);
+
+// resize canvas display
+function fitCanvas() {
+  const wrap = document.getElementById('gameWrap');
+  const maxH = wrap.clientHeight - 8;
+  const maxW = wrap.clientWidth - 8;
+  const scale = Math.min(maxW / W, maxH / H, 1.35);
+  canvas.style.width = (W * scale) + 'px';
+  canvas.style.height = (H * scale) + 'px';
+}
+window.addEventListener('resize', fitCanvas);
+fitCanvas();
+</script>
+</body>
+</html>
