@@ -79,6 +79,12 @@ export function expertNotifyLanding(platform, score) {
   }
 }
 
+export function isAiLooping() {
+  // true if any platform has been landed on 3+ times consecutively
+  for (const n of landCount.values()) if (n >= 3) return true;
+  return hardBan.size >= 3 && stuckFrames > 40;
+}
+
 export function expertReset() {
   landCount.clear();
   hardBan.clear();

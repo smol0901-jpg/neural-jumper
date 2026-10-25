@@ -1,7 +1,7 @@
 /**
  * AI Debug harness — grid overlay, decision telemetry, 10-run auto batch, report export.
  */
-import { W, H, JUMP, GRAV, MAXVX } from './config.js';
+import { W, H, JUMP, GRAV, MAXVX, VERSION } from './config.js';
 
 const MAX_JUMP_H = (JUMP * JUMP) / (2 * GRAV);
 
@@ -153,11 +153,13 @@ export function buildReport(dbg) {
   const report = {
     meta: {
       generatedAt: new Date().toISOString(),
+      version: VERSION,
       canvas: { W, H },
       physics: {
         GRAV, JUMP, MAXVX,
-        maxJumpHeightPx: MAX_JUMP,
-        approxMaxReachX: round(MAXVX * (2 * Math.abs(JUMP) / GRAV) * 0.5, 1)
+        maxJumpHeightPx: Math.round((JUMP * JUMP) / (2 * GRAV)),
+        approxMaxReachX: Math.round(MAXVX * (Math.abs(JUMP) / GRAV) * 0.95),
+        version: VERSION
       },
       batchSize: dbg.runs.length,
       gridStep: dbg.gridStep

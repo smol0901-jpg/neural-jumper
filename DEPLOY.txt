@@ -1,0 +1,18 @@
+Neural Ascent v7.1 — обязательно прочитай
+
+1) Залей ВСЮ папку neural-ascent/ в корень GitHub Pages репозитория
+   (smol0901-jpg.github.io или docs/).
+
+2) Service Worker кэшировал старый код. После деплоя:
+   - Открой сайт
+   - Chrome/Safari: Settings → очистить данные сайта / Unregister SW
+   - Или: DevTools → Application → Service Workers → Unregister
+   - Hard refresh (Ctrl+Shift+R)
+
+3) Проверка что v7.1 живой:
+   - В шапке должно быть "v7.1"
+   - В ai-debug-report.json → meta.version = "7.1.0"
+   - meta.physics.GRAV должно быть 0.52 (не 0.5)
+   - decisionsCount > 0 в прогонах
+
+4) Если всё ещё GRAV 0.5 — кэш не сброшен, сайт отдаёт старые js.

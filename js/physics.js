@@ -10,7 +10,7 @@ import { diff, computeDifficulty, applyLevelFeatures, levelFromScore, milestoneM
 import { makePlatform, makeEnemy } from './world.js';
 import { trainBatch, setBestScore, recordHuman, decide } from './network.js';
 import { clamp } from './utils.js';
-import { expertAction, expertNotifyLanding } from './expert.js';
+import { expertAction, expertNotifyLanding, isAiLooping } from './expert.js';
 
 function reachable(player, p) {
   const dx = Math.abs((p.x + p.w / 2) - player.x);
@@ -234,7 +234,7 @@ export function physicsStep(state, opts) {
   } else {
     state._stagnantFrames = (state._stagnantFrames || 0) + 1;
   }
-  if (state._stagnantFrames > 600 && state.jumps > 4) {
+  if ((state._stagnantFrames > 480 && state.jumps > 3) || (typeof isAiLooping === 'function' && isAiLooping() && state.jumps > 3)) {
     endEp(state, 'stuck', rewardHistory, learning, onLog, onEpisodeEnd);
     return;
   }
