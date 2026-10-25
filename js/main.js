@@ -40,6 +40,7 @@ function bootWorld() {
 }
 
 function startGame(m) {
+  try { setSideOpen(false); } catch(e) {}
   mode = m;
   ui.setModeBtn(mode);
   totalEps++;
@@ -154,7 +155,10 @@ document.getElementById('btnWatchAI').onclick = () => startGame('ai');
 document.getElementById('btnMode').onclick = toggleMode;
 document.getElementById('btnLearn').onclick = toggleLearn;
 document.getElementById('btnPause').onclick = togglePause;
-document.getElementById('btnReset').onclick = () => startGame(mode);
+document.getElementById('btnReset').onclick = () => {
+  try { setSideOpen(false); } catch(e) {}
+  startGame(mode);
+};
 document.getElementById('btnWipe').onclick = () => {
   wipeWeights();
   ui.log('warn', 'AI weights wiped');
@@ -179,18 +183,47 @@ function bindDebugButtons() {
 }
 bindDebugButtons();
 
+function setSideOpen(open) {
+  const side = document.getElementById('side');
+  const btn = document.getElementById('btnSide');
+  if (!side) return;
+  if (open) {
+    side.classList.add('open');
+    side.style.display = 'flex';
+    if (btn) { btn.textContent = 'ЗАКРЫТЬ'; btn.classList.add('active'); }
+  } else {
+    side.classList.remove('open');
+    if (window.innerWidth <= 960) side.style.display = 'none';
+    else side.style.display = '';
+    if (btn) { btn.textContent = 'INFO'; btn.classList.remove('active'); }
+    // If game never started — bring back start overlay (fixes empty black screen)
+    if (!started) {
+      const ov = document.getElementById('overlay');
+      if (ov && ov.style.display === 'none') {
+        ov.style.display = 'flex';
+      }
+    }
+  }
+}
+function toggleSide() {
+  const side = document.getElementById('side');
+  setSideOpen(!(side && side.classList.contains('open')));
+}
 document.getElementById('btnSide').onclick = (e) => {
   e.preventDefault();
   e.stopPropagation();
-  const side = document.getElementById('side');
-  side.classList.toggle('open');
-  // force visible on small screens
-  if (side.classList.contains('open')) {
-    side.style.display = 'flex';
-  } else if (window.innerWidth <= 960) {
-    side.style.display = 'none';
-  }
+  toggleSide();
 };
+document.getElementById('btnSideClose')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setSideOpen(false);
+});
+// Escape closes panel
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') setSideOpen(false);
+});
+
 
 document.querySelectorAll('.tab').forEach(t => {
   t.onclick = () => {
