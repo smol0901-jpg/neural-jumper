@@ -22,7 +22,7 @@ function reachable(player, p) {
 
 export function physicsStep(state, opts) {
   const { mode, learning, keys, humanJumpQueued, fireQueued,
-    rewardHistory, onLog, onLevelUp, onEpisodeEnd, clearJumpQueue, clearFire } = opts;
+    rewardHistory, onLog, onLevelUp, onEpisodeEnd, clearJumpQueue, clearFire, onLanding, onDecision, onSample } = opts;
 
   if (state.gameOver) { state.deadTimer++; return; }
   state.frame++; state.epStep++;
@@ -100,6 +100,7 @@ export function physicsStep(state, opts) {
           player.lastBounce = state.frame;
           // success toward target?
           if (state.currentTarget === p) state.failJumps = 0;
+          if (onLanding) onLanding(state, p);
           break;
         }
       }

@@ -18,6 +18,7 @@ const ASSETS = [
   './js/renderer25d.js',
   './js/ui.js',
   './js/expert.js',
+  './js/debug.js',
   './js/main.js',
   './assets/icon-192.png',
   './assets/icon-512.png'

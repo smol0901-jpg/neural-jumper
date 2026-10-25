@@ -169,17 +169,17 @@ export function expertAction(state) {
     if (e.dead) continue;
     const d = Math.hypot(e.x - player.x, e.y - player.y);
     if (d < 110 && Math.abs(e.y - player.y) < 55) {
-      if (e.x > player.x + 5) return { action: 2, fire: true, target };
-      if (e.x < player.x - 5) return { action: 0, fire: true, target };
-      return { action: 1, fire: true, target };
+      if (e.x > player.x + 5) return { action: 2, fire: true, target, reason: 'shoot-enemy-R' };
+      if (e.x < player.x - 5) return { action: 0, fire: true, target, reason: 'shoot-enemy-L' };
+      return { action: 1, fire: true, target, reason: 'shoot-enemy' };
     }
   }
 
   if (!target) {
-    if (player.vy > 3 && player.jumpsLeft > 0) return { action: 3, fire: false, target: null };
-    if (player.x < W * 0.3) return { action: 2, fire: false, target: null };
-    if (player.x > W * 0.7) return { action: 0, fire: false, target: null };
-    return { action: 1, fire: false, target: null };
+    if (player.vy > 3 && player.jumpsLeft > 0) return { action: 3, fire: false, target: null, reason: 'no-tgt-double' };
+    if (player.x < W * 0.3) return { action: 2, fire: false, target: null, reason: 'no-tgt-center' };
+    if (player.x > W * 0.7) return { action: 0, fire: false, target: null, reason: 'no-tgt-center' };
+    return { action: 1, fire: false, target: null, reason: 'no-tgt-stay' };
   }
 
   const aimX = platCenter(target);
@@ -218,6 +218,7 @@ export function expertAction(state) {
     if (player.jumpsLeft > 0 && pastApex) dbl = true;
   }
 
-  if (dbl) return { action: 3, fire: false, target };
-  return { action: move, fire: false, target };
+  if (dbl) return { action: 3, fire: false, target, reason: needH ? 'double-need-H' : needX ? 'double-need-X' : urgency > 0.5 ? 'double-urgent' : 'double' };
+  const why = move === 1 ? 'aim-center' : move === 2 ? 'steer-R' : 'steer-L';
+  return { action: move, fire: false, target, reason: urgency > 0.82 ? 'emergency-safe' : why };
 }

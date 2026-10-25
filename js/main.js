@@ -6,6 +6,10 @@ import { computeDifficulty, applyLevelFeatures } from './levels.js';
 import { resetWorldState, seedPlatforms } from './world.js';
 import { physicsStep } from './physics.js';
 import { drawFrame } from './renderer25d.js';
+import {
+  createDebugState, startRun, logDecision, logLanding, logSample,
+  endRun, buildReport, reportToText, drawDebugOverlay
+} from './debug.js';
 import { createUI } from './ui.js';
 
 const canvas = document.getElementById('world');
@@ -13,6 +17,7 @@ const ctx = canvas.getContext('2d');
 const ui = createUI();
 
 let state = null;
+let dbg = createDebugState();
 let mode = 'human';
 let learning = true;
 let paused = false;
@@ -40,15 +45,49 @@ function startGame(m) {
   ui.hideOverlay();
   started = true;
   ui.log('info', `Episode ${totalEps} · ${mode.toUpperCase()}`);
+  if (dbg.enabled) startRun(dbg);
 }
 
 function onEpisodeEnd(reason) {
   const net = getNetStats();
   bestScore = Math.max(bestScore, net.bestScore, state.score);
+  // Debug batch handling
+  if (dbg.enabled && dbg.batchMode) {
+    endRun(dbg, state, reason);
+    dbg.batchIndex++;
+    if (dbg.batchIndex < dbg.batchTarget) {
+      ui.log('ai', `Debug run ${dbg.batchIndex}/${dbg.batchTarget} done · score ${state.score}`);
+      setTimeout(() => {
+        startGame('ai');
+        startRun(dbg);
+      }, 500);
+      return; // skip overlay during batch
+    }
+    // finished batch
+    dbg.batchMode = false;
+    const report = buildReport(dbg);
+    const text = reportToText(report);
+    downloadBlob(text, 'ai-debug-report.txt', 'text/plain');
+    downloadBlob(JSON.stringify(report, null, 2), 'ai-debug-report.json', 'application/json');
+    console.log('AI DEBUG REPORT', report);
+    ui.showOverlay(`
+      <h1 style="color:var(--cyan)">DEBUG DONE</h1>
+      <div class="big-score">${report.summary.avgScore}</div>
+      <p class="sub">Avg score · Best ${report.summary.bestScore} · ${report.summary.runs} runs</p>
+      <p class="sub">Report files downloaded (txt + json)</p>
+      <button class="btn active" id="btnRestart">PLAY AGAIN</button>
+      <button class="btn" id="btnWatchAI2">WATCH AI</button>
+    `);
+    document.getElementById('btnRestart').onclick = () => { dbg.enabled = false; startGame('human'); };
+    document.getElementById('btnWatchAI2').onclick = () => { dbg.enabled = false; startGame('ai'); };
+    return;
+  }
+  if (dbg.enabled && dbg.current) endRun(dbg, state, reason);
+
   ui.showOverlay(`
     <h1 style="color:var(--rose)">RUN OVER</h1>
     <div class="big-score">${state.score}</div>
-    <p class="sub">Level ${state.level} · ${reason === 'fell' ? 'Fell into the void' : 'Time out'} · Best ${bestScore}</p>
+    <p class="sub">Level ${state.level} · ${reason === 'fell' ? 'Fell into the void' : reason} · Best ${bestScore}</p>
     <button class="btn active" id="btnRestart">PLAY AGAIN</button>
     <button class="btn" id="btnWatchAI2">WATCH AI</button>
   `);
@@ -111,6 +150,7 @@ document.getElementById('btnWipe').onclick = () => {
   ui.log('warn', 'AI weights wiped');
   if (started) startGame(mode);
 };
+document.getElementById('btnDebug').onclick = () => startDebugBatch();
 document.getElementById('btnSide').onclick = (e) => {
   e.preventDefault();
   e.stopPropagation();
@@ -176,18 +216,27 @@ function loop(t) {
         onLevelUp,
         onEpisodeEnd,
         clearJumpQueue: () => { humanJumpQueued = false; },
-        clearFire: () => { fireQueued = false; }
+        clearFire: () => { fireQueued = false; },
+        onLanding: (st, plat) => { if (dbg.enabled) logLanding(dbg, st, plat); },
+        onDecision: (st, a, exp) => {
+          if (!dbg.enabled) return;
+          // log always on DOUBLE/FIRE, else every 8 frames
+          if (a === 3 || a === 4 || (st.frame % 8 === 0)) {
+            logDecision(dbg, st, a, { reason: exp.reason || '', reach: null });
+          }
+        },
+        onSample: (st) => { if (dbg.enabled) logSample(dbg, st); }
       });
       acc -= TICK;
       steps++;
     }
-  } else if (started && state && state.gameOver && mode === 'ai') {
-    // auto restart AI after delay
+  } else if (started && state && state.gameOver && mode === 'ai' && !(dbg.batchMode)) {
     if (state.deadTimer > 100) startGame('ai');
   }
 
   if (state) {
     drawFrame(ctx, state, mode);
+    if (dbg && dbg.enabled) drawDebugOverlay(ctx, state, dbg);
     ui.update(state, mode, learning, totalEps, bestScore);
   }
 }
@@ -254,3 +303,64 @@ document.getElementById('btnInstall')?.addEventListener('click', async () => {
 document.getElementById('btnInstallDismiss')?.addEventListener('click', () => {
   document.getElementById('installBar')?.classList.remove('show');
 });
+
+
+// ===== AI DEBUG BATCH =====
+function startDebugBatch() {
+  dbg.enabled = true;
+  dbg.batchMode = true;
+  dbg.batchIndex = 0;
+  dbg.batchTarget = 10;
+  dbg.runs = [];
+  dbg.showGrid = true;
+  if (typeof log === 'function') log('warn', 'DEBUG BATCH: 10 AI runs starting');
+  else console.log('DEBUG BATCH start');
+  startGame('ai');
+  startRun(dbg);
+}
+
+function onDebugEpisodeEnd(reason) {
+  if (!dbg.enabled) return;
+  endRun(dbg, state, reason);
+  if (dbg.batchMode) {
+    dbg.batchIndex++;
+    if (dbg.batchIndex < dbg.batchTarget) {
+      setTimeout(() => {
+        startGame('ai');
+        startRun(dbg);
+        if (window.__naLog) window.__naLog('ai', `Debug run ${dbg.batchIndex + 1}/${dbg.batchTarget}`);
+      }, 600);
+    } else {
+      dbg.batchMode = false;
+      finishDebugBatch();
+    }
+  }
+}
+
+function finishDebugBatch() {
+  const report = buildReport(dbg);
+  const text = reportToText(report);
+  const json = JSON.stringify(report, null, 2);
+  // download both
+  downloadBlob(text, 'ai-debug-report.txt', 'text/plain');
+  downloadBlob(json, 'ai-debug-report.json', 'application/json');
+  console.log('AI DEBUG REPORT', report);
+  alert(`Debug batch done: ${report.summary.runs} runs, avg score ${report.summary.avgScore}, best ${report.summary.bestScore}. Files downloaded.`);
+  dbg.enabled = false;
+}
+
+function downloadBlob(content, name, type) {
+  const blob = new Blob([content], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+window.startDebugBatch = startDebugBatch;
+window.toggleDebugLive = () => {
+  dbg.enabled = !dbg.enabled;
+  dbg.showGrid = dbg.enabled;
+  if (dbg.enabled && !dbg.current && mode === 'ai') startRun(dbg);
+};
